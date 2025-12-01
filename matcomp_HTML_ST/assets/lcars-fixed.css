@@ -1,0 +1,90 @@
+/* ========================================================
+   LCARS FIXED-POSITION UI (Streamlit Safe)
+   Mode: A (Fixed Top Bar + Fixed Left Column)
+   Style: Nemesis Blue, Slim Column (L3)
+   --------------------------------------------------------
+   IMPORTANT: This file does NOT require HTML wrappers.
+   It positions LCARS elements as fixed overlays so
+   Streamlit content scrolls beneath them cleanly.
+   ======================================================== */
+
+:root {
+  --lcars-left-width: 70px;
+  --lcars-top-height: 70px;
+  --lcars-blue: #2a63ff;
+  --lcars-blue-accent: #6ea9ff;
+  --lcars-text-light: #cfe0ff;
+  --lcars-title-size: clamp(1.6rem, 3vw, 2.8rem);
+  --lcars-font: "Antonio", "Segoe UI", sans-serif;
+}
+
+/* ================================
+   LOAD CUSTOM FONTS IF DECLARED
+   ================================ */
+html body {
+  font-family: var(--lcars-font);
+}
+
+/* ================================
+   FIXED TOP BAR
+   ================================ */
+#lcars-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: var(--lcars-top-height);
+  width: 100%;
+  background: var(--lcars-blue);
+  color: var(--lcars-text-light);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  padding-left: calc(var(--lcars-left-width) + 25px);
+  letter-spacing: 0.08em;
+  user-select: none;
+  font-size: var(--lcars-title-size);
+  font-weight: 700;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* ================================
+   FIXED LEFT LCARS COLUMN
+   ================================ */
+#lcars-leftbar {
+  position: fixed;
+  top: var(--lcars-top-height);
+  left: 0;
+  width: var(--lcars-left-width);
+  bottom: 0;
+  background: linear-gradient(180deg, var(--lcars-blue-accent), var(--lcars-blue));
+  z-index: 8990;
+  border-radius: 0 22px 22px 0;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+}
+
+/* Accent pills inside left bar */
+#lcars-leftbar .pill {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin: 20px auto;
+  background: rgba(255,255,255,0.12);
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.25);
+}
+
+/* ================================
+   SHIFT STREAMLIT CONTENT RIGHT + DOWN
+   ================================ */
+section.main > div {
+  padding-top: calc(var(--lcars-top-height) + 25px) !important;
+  padding-left: calc(var(--lcars-left-width) + 30px) !important;
+}
+
+/* ================================
+   OPTIONAL: STYLE STREAMLIT HEADERS
+   ================================ */
+h1, h2, h3 {
+  font-family: var(--lcars-font) !important;
+  color: #222 !important;
+  letter-spacing: 0.03em;
+}
