@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stressjock's Portfolio // My Repositories</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+
+    <style>
+        /* Apply Inter font universally and set dark background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d10; /* Very deep space gray */
+            color: #f1f5f9; /* Light text */
+            scroll-behavior: smooth;
+        }
+
+        /* Custom CSS for the Parallax Hero Background */
+        .hero-background {
+            /* Full screen size */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            /* Update: Background image is now set to look inside the 'images' folder */
+            background-image: url('./images/cinematic_hero.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Critical for the basic parallax effect */
+            filter: brightness(30%); /* Dramatically darken the image */
+            z-index: -1;
+            transition: opacity 0.5s;
+        }
+
+        /* The hero content wrapper ensures text stays centered above the background */
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 2rem;
+            /* Add subtle cinematic glow effect */
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5); 
+        }
+
+        /* Styling for the Project Cards */
+        .project-card {
+            background-color: #1a1a20; /* Slightly lighter dark gray for contrast */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            border: 1px solid #2d2d34;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(6, 182, 212, 0.3);
+        }
+
+        /* Cinematic Button Styling */
+        .cinematic-btn {
+            background-color: #06b6d4; /* Vibrant accent color (Sky Blue) */
+            color: #000;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .cinematic-btn:hover {
+            background-color: #38bdf8;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. CINEMATIC HERO SECTION -->
+    <div class="hero-background" id="hero-bg"></div>
+
+    <header class="hero-content">
+        <!-- Main Title: Use a bold, dramatic font size -->
+        <h1 class="text-6xl md:text-8xl font-extrabold tracking-tight text-sky-400 mb-4 uppercase">
+            Stressjock's Matrix
+        </h1>
+        <!-- Subtitle -->
+        <p class="text-xl md:text-3xl text-gray-300 font-light mb-12">
+            The Codex of the Ancients can be found within.
+        </p>
+        <a href="#projects" class="cinematic-btn px-8 py-3 rounded-full">
+            View Project Archive
+        </a>
+    </header>
+
+    <!-- 2. PROJECTS SECTION -->
+    <section id="projects" class="min-h-screen pt-20 pb-16 px-4 md:px-12 bg-gray-900/50">
+        <h2 class="text-4xl font-bold mb-12 text-center text-sky-400 uppercase tracking-wider">
+            Repository Index
+        </h2>
+
+        <!-- Projects Grid -->
+        <div id="project-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <!-- Project Cards will be inserted here by JavaScript -->
+        </div>
+
+    </section>
+
+    <!-- 3. FOOTER -->
+    <footer class="text-center py-8 text-gray-400 border-t border-gray-800/50">
+        <p>&copy; 2025 Stressjock. All Rights Reserved. Code is Public.</p>
+        <div class="mt-2 flex justify-center space-x-4">
+            <a href="#" class="text-sky-400 hover:text-sky-300 transition duration-300">GitHub Profile</a>
+            <span>|</span>
+            <a href="mailto:your.email@example.com" class="text-sky-400 hover:text-sky-300 transition duration-300">Contact</a>
+        </div>
+    </footer>
+
+    <script>
+        // --- DATA SECTION ---
+        // Replace these mock objects with your actual projects and links!
+        const projects = [
+            {
+                title: "Material Comparison",
+                description: "A material comparison analyzer using an LCARS style wrapper.",
+                tech: ["JavaScript", "HTML"],
+                demoLink: "https://stressjock/github.io/matcomp_HTML_ST/matcomp_HTML_ST.html",
+                repoLink: "https://github.com/stressjock/matcomp_HTML_ST"
+            },
+            {
+                title: "3D Planet Simulation (Three.js)",
+                description: "An interactive visualization of planetary movement using Three.js, demonstrating complex 3D rendering skills.",
+                tech: ["JavaScript", "Three.js", "WebGL"],
+                demoLink: "#",
+                repoLink: "https://github.com/your-username/planet-sim"
+            },
+            {
+                title: "E-Commerce Microservices",
+                description: "A decoupled application architecture using REST APIs, Docker, and multiple services for scalability.",
+                tech: ["Python", "Flask", "Docker", "MongoDB"],
+                demoLink: "#",
+                repoLink: "https://github.com/your-username/ecomm-msa"
+            },
+            {
+                title: "AI-Powered Text Summarizer",
+                description: "A web utility that leverages a Language Model API to condense large articles into concise summaries.",
+                tech: ["Python", "API Integration", "HTML/Tailwind"],
+                demoLink: "#",
+                repoLink: "https://github.com/your-username/ai-summarizer"
+            },
+        ];
+
+        // --- JAVASCRIPT LOGIC ---
+
+        /**
+         * 1. Project Card Generation
+         * Dynamically creates the project cards from the 'projects' array.
+         */
+        function renderProjects() {
+            const container = document.getElementById('project-list');
+            
+            projects.forEach(project => {
+                const techTags = project.tech.map(tag => 
+                    `<span class="text-xs font-medium bg-sky-900/40 text-sky-300 px-2 py-1 rounded-full">${tag}</span>`
+                ).join('');
+
+                const cardHtml = `
+                    <div class="project-card p-6 rounded-xl">
+                        <h3 class="text-2xl font-bold mb-2 text-sky-400">${project.title}</h3>
+                        <p class="text-gray-400 mb-4">${project.description}</p>
+                        
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            ${techTags}
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <a href="${project.demoLink}" target="_blank" class="flex-1 cinematic-btn text-center py-2 rounded-lg">
+                                Live Demo
+                            </a>
+                            <a href="${project.repoLink}" target="_blank" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-center py-2 rounded-lg transition duration-300">
+                                Repository
+                            </a>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        /**
+         * 2. Cinematic Scroll/Parallax Effect
+         * This function subtly moves the background slower than the foreground content.
+         */
+        function handleParallax() {
+            const background = document.getElementById('hero-bg');
+            // Check if the background element exists
+            if (!background) return;
+
+            // Get the scroll position
+            const scrolled = window.scrollY;
+            
+            // Adjust the background position based on scroll.
+            // Dividing by 3 slows down the background movement dramatically.
+            background.style.transform = 'translateY(' + scrolled * 0.3 + 'px)';
+        }
+
+        // Initialize the functions when the window loads
+        window.onload = function() {
+            renderProjects();
+            
+            // Add the scroll listener for the parallax effect
+            window.addEventListener('scroll', handleParallax);
+        };
+        
+    </script>
+</body>
+</html>
