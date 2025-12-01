@@ -21,6 +21,8 @@ Uses the Antonio font (locally sourced from an assets/ folder, which is outside 
 Audio: Defines six separate audio files (audio1 through audio6) for sound effects on button clicks.
 
 2. Layout (LCARS Interface)
+ref: Michael Okuda, Library Computer Access Retrieval System.
+
 The page uses a flexible layout consisting of a fixed-width Left Frame (Sidebar) and an expanding Right Frame (Main Content Area).
 
 Top Section (.right-frame-top):
