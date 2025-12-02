@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABOT Market Simulator v14.0 (Margin Arrest & Game Goals)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for BOT100 graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark background */
+            color: #c9d1d9; /* Light text */
+            padding-bottom: 40px; /* Space for ticker */
+        }
+        /* Custom scrollbar for output */
+        #output-container {
+            max-height: 85vh; 
+            min-height: 500px;
+            overflow-y: auto;
+            border-radius: 0.5rem;
+            background-color: #161b22;
+            padding: 0.75rem;
+            font-size: 0.875rem; /* sm */
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column; 
+        }
+
+        /* Styling for the log messages */
+        .log-message {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        /* News Type Colors */
+        .type-rumour { color: #f87171; font-weight: bold; } /* RED */
+        .type-statement { color: #facc15; font-weight: bold; } /* YELLOW */
+        .type-news { color: #60a5fa; font-weight: bold; } /* BLUE */
+        .type-earnings { color: #4ade80; font-weight: bold; } /* GREEN */
+        .type-global { color: #f472b6; font-weight: bold; text-transform: uppercase; } /* PINK for Global */
+        .type-alert { color: #ef4444; font-weight: bold; text-transform: uppercase; background-color: rgba(239, 68, 68, 0.1); padding: 2px 5px; } /* Alert Red */
+        
+        /* Standard Utility Colors */
+        .color-green { color: #4ade80; }
+        .color-red { color: #f87171; }
+        .color-blue { color: #60a5fa; }
+        .color-yellow { color: #facc15; }
+        .color-gray { color: #9ca3af; }
+
+        /* Chart container styling */
+        #chart-container {
+            background-color: #161b22;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            height: 350px; 
+        }
+
+        /* Responsive table wrapping */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        /* --- TICKER TAPE STYLES --- */
+        .ticker-wrap {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 36px;
+            overflow: hidden;
+            background-color: #1f2937; /* Gray-800 */
+            border-top: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 60s linear infinite;
+            padding-left: 100%; /* Start off-screen */
+        }
+
+        .ticker-item {
+            display: inline-block;
+            padding: 0 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        
+        .ticker-up { color: #4ade80; }
+        .ticker-down { color: #f87171; }
+        .ticker-global { color: #f472b6; text-shadow: 0 0 2px #f472b6; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <header class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-100">ABOT Market Simulator</h1>
+        <p class="text-gray-400">Financial Simulation (Type HELP for commands)</p>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Column 1: Status, COMMAND INPUT, Portfolio & Price Table -->
+        <div id="status-panel" class="lg:col-span-1 space-y-6">
+            
+            <!-- Market Status Card -->
+            <div class="bg-[#161b22] p-4 rounded-lg shadow-xl border border-gray-700">
+                <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Market Overview</h2>
+                <p class="text-sm">Day: <span id="market-day" class="font-bold text-blue-400">1</span></p>
+                <p class="text-sm">Time: <span id="market-time" class="font-mono text-blue-400">09:00:00</span></p>
+                <p class="text-sm">Status: <span id="market-status" class="font-bold text-red-500">CLOSED</span></p>
+                <p class="text-sm">BOT100 Index: <span id="bot-index" class="font-mono text-green-400 text-xl">1000</span></p>
+            </div>
+
+            <!-- Command Input -->
+            <div class="bg-[#161b22] p-4 rounded-lg shadow-xl border border-gray-700">
+                <h2 class="text-xl font-semibold mb-3 text-white">Command Center</h2>
+                <form id="command-form" class="flex flex-col gap-2">
+                    <input type="text" id="command-input" placeholder="e.g., BUY TKR 10"
+                           class="w-full p-3 bg-[#0d1117] border border-gray-700 text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           autocomplete="off">
+                    <button type="submit"
+                            class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">
+                        EXECUTE
+                    </button>
+                </form>
+            </div>
+
+            <!-- Portfolio Card -->
+            <div class="bg-[#161b22] p-4 rounded-lg shadow-xl border border-gray-700">
+                <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Your Portfolio</h2>
+                
+                <p class="text-sm font-bold">NET WORTH: <span id="portfolio-net-worth" class="font-mono text-yellow-400">$10,000.00</span></p>
+                <p class="text-sm border-t border-gray-700 pt-2 mt-2">CASH: <span id="portfolio-cash" class="font-mono text-yellow-400">$10,000.00</span></p>
+                <!-- Renamed to Margin Account -->
+                <p class="text-sm">Margin Account: <span id="portfolio-margin-account" class="font-mono text-red-400">$0.00</span></p>
+                <p class="text-sm">Available Margin: <span id="portfolio-available-margin" class="font-mono text-green-400">$5,000.00</span></p>
+                <p class="text-sm">Daily Loan Cost: <span id="portfolio-loan-cost" class="font-mono text-red-400">$0.00</span></p>
+
+                <div id="portfolio-margin-call" class="mt-2 text-sm"></div>
+                
+                <div id="portfolio-holdings" class="mt-4 space-y-1 text-xs">
+                    <p class="text-gray-500">No holdings.</p>
+                </div>
+            </div>
+
+            <!-- Price Table -->
+            <div class="bg-[#161b22] p-4 rounded-lg shadow-xl border border-gray-700">
+                <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Asset Prices</h2>
+                <div class="table-wrapper">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="py-1">Ticker</th>
+                                <th class="py-1">Sector</th>
+                                <th class="py-1 text-right">Price</th>
+                                <th class="py-1 text-right">Change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="price-table-body">
+                            <!-- Asset prices will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Chart & Log -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Chart -->
+            <div id="chart-container">
+                <canvas id="marketChart"></canvas>
+            </div>
+
+            <!-- Output Log -->
+            <div id="output-container">
+                <div class="log-message color-blue">Welcome to ABOT Market Simulator! Type HELP for a list of commands.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticker Footer -->
+    <div class="ticker-wrap">
+        <div class="ticker-move" id="ticker-content">
+            <!-- Content generated by JS -->
+            <span class="ticker-item text-gray-400">MARKET CLOSED. WAITING FOR START...</span>
+        </div>
+    </div>
+
+<script>
+    let game;
+
+    const formatCurrency = (amount) => `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    const calculateValue = (price, quantity) => price * quantity;
+    const getRandomChange = (volatility) => (Math.random() - 0.5) * volatility * 2;
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+
+    class MarketEngine {
+        constructor() {
+            this.initialCash = 10000;
+            this.cash = this.initialCash;
+            this.marginAccount = 0; 
+            this.holdings = {}; 
+            
+            this.annualInterestRate = 0.50; 
+            this.dailyInterestRate = this.annualInterestRate / 252; 
+            
+            this.maintenanceMarginRatio = 0.50; 
+            this.marginLimitRatio = 0.5; 
+
+            this.commissionRate = 0.02; 
+
+            this.day = 1;
+            this.hours = 9; 
+            this.minutes = 0; 
+            this.seconds = 0; 
+            this.simulatedMinutesPerTick = 4; 
+            this.marketTicks = 0; 
+
+            this.marketOpen = false; 
+            this.simulationInterval = null;
+            
+            this.newsPerTick = 2; 
+            this.simulationSpeedMs = 15000; 
+            
+            this.activeGlobalNews = ""; 
+            this.isMarginCalled = false;
+            this.marginCallTicks = 0; // Track ticks under margin call
+
+            // Asset List
+            this.assets = {
+                'TKR': { name: 'TechRift Corp', price: 150.00, sector: 'Technology', volatility: 0.006, change: 0.00 },
+                'NBL': { name: 'NovaBlast Games', price: 75.00, sector: 'Technology', volatility: 0.008, change: 0.00 },
+                'SYN': { name: 'Synaptic AI', price: 300.00, sector: 'Technology', volatility: 0.005, change: 0.00 },
+                'CYB': { name: 'CyberSec Shield', price: 110.00, sector: 'Technology', volatility: 0.007, change: 0.00 },
+                'CRB': { name: 'Carbon Energy', price: 120.00, sector: 'Energy', volatility: 0.003, change: 0.00 },
+                'SOL': { name: 'Sunbeam Power', price: 60.00, sector: 'Energy', volatility: 0.004, change: 0.00 },
+                'PET': { name: 'PetroChem Inc.', price: 90.00, sector: 'Energy', volatility: 0.003, change: 0.00 },
+                'NUK': { name: 'Nuclear Core Tech', price: 180.00, sector: 'Energy', volatility: 0.005, change: 0.00 },
+                'GLD': { name: 'Global Dynamics', price: 25.00, sector: 'Healthcare', volatility: 0.004, change: 0.00 },
+                'PHM': { name: 'PharmaCore Labs', price: 210.00, sector: 'Healthcare', volatility: 0.002, change: 0.00 },
+                'MDC': { name: 'MediCare Systems', price: 45.00, sector: 'Healthcare', volatility: 0.003, change: 0.00 },
+                'BIO': { name: 'BioGen Research', price: 130.00, sector: 'Healthcare', volatility: 0.005, change: 0.00 },
+                'FST': { name: 'First Tier Bank', price: 85.00, sector: 'Financials', volatility: 0.003, change: 0.00 },
+                'INV': { name: 'Apex Investments', price: 220.00, sector: 'Financials', volatility: 0.004, change: 0.00 },
+                'LND': { name: 'Lending Solutions', price: 55.00, sector: 'Financials', volatility: 0.003, change: 0.00 },
+                'INS': { name: 'InsurePro Group', price: 100.00, sector: 'Financials', volatility: 0.002, change: 0.00 },
+                'MOO': { name: 'Moosavian Gold Inc.', price: 600.00, sector: 'Resources', volatility: 0.005, change: 0.00 },
+                'MIN': { name: 'Rare Earth Minerals', price: 45.00, sector: 'Resources', volatility: 0.004, change: 0.00 },
+                'WTR': { name: 'Pure Water Holdings', price: 90.00, sector: 'Resources', volatility: 0.003, change: 0.00 },
+                'TIM': { name: 'Timberline Forestry', price: 120.00, sector: 'Resources', volatility: 0.004, change: 0.00 }
+            };
+            
+            this.initialMarketCap = Object.values(this.assets).reduce((acc, asset) => acc + (asset.price * 1000), 0);
+            this.bot100Index = 1000;
+
+            this.newsEvents = this.generateNewsEvents();
+            this.indexHistory = [];
+            
+            // Chart setup 
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [], 
+                    datasets: [{
+                        label: 'BOT100 Index',
+                        data: [],
+                        borderColor: '#79c0ff',
+                        backgroundColor: 'rgba(121, 192, 255, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0, 
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: '#2f353d' },
+                            ticks: { color: '#c9d1d9' }
+                        },
+                        x: {
+                            grid: { color: '#2f353d' },
+                            ticks: { 
+                                color: '#c9d1d9',
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { 
+                            callbacks: { 
+                                label: (context) => `Index: ${context.parsed.y.toFixed(2)}` 
+                            } 
+                        },
+                        title: {
+                            display: true,
+                            text: 'BOT100 Index',
+                            color: '#c9d1d9',
+                            font: { size: 16 }
+                        }
+                    }
+                }
+            });
+
+            this.updateStatusUI();
+            this.updatePriceTable();
+            this.updateTicker();
+            
+            // Initial Game Note
+            this.log("DAY 1 of 30. TARGET: $1,000,000. WIN THE GAME OR GO BROKE.", 'type-global');
+        }
+
+        generateGlobalNews() {
+            const globalEvents = [
+                { text: "BREAKING: Central Bank Announces Surprise Rate Hike to Combat Inflation!", effect: -0.03 },
+                { text: "GLOBAL ALERT: Major geopolitical conflict escalates, supply chains disrupted.", effect: -0.05 },
+                { text: "ECONOMY: Unexpected job growth data spurs market rally.", effect: 0.02 },
+                { text: "BLACK SWAN: Massive cyber-attack hits global banking infrastructure.", effect: -0.08 },
+                { text: "TECH BOOM: Breakthrough in Quantum Computing announced by consortium.", effect: 0.04 },
+                { text: "COMMODITIES: Oil prices plummet as new reserves discovered.", effect: 0.01 },
+                { text: "PANDEMIC UPDATE: New health guidelines restrict travel, markets jittery.", effect: -0.02 }
+            ];
+            
+            // 5% chance of global news per news generation cycle
+            if (Math.random() < 0.05) {
+                const event = globalEvents[Math.floor(Math.random() * globalEvents.length)];
+                this.activeGlobalNews = event.text;
+                
+                // Market wide impact
+                for (const t in this.assets) {
+                    const asset = this.assets[t];
+                    asset.price = clamp(asset.price * (1 + event.effect), 0.01, 5000.00);
+                }
+                
+                this.log(`[GLOBAL NEWS] ${event.text}`, 'type-global');
+                this.updateTicker(); // Immediate ticker update
+            }
+        }
+
+        generateNewsEvents() {
+            // ... (Previous news generation logic) ...
+            const news = [];
+            const tickers = Object.keys(this.assets);
+            const eventTemplates = [
+                { category: 'EARNINGS', colorClass: 'type-earnings', text: 'reports record-breaking quarterly revenue.', effect: 0.08 },
+                { category: 'EARNINGS', colorClass: 'type-earnings', text: 'misses earnings expectations by a wide margin.', effect: -0.08 },
+                { category: 'STATEMENT', colorClass: 'type-statement', text: 'CEO announces major restructuring plan.', effect: 0.03 },
+                { category: 'STATEMENT', colorClass: 'type-statement', text: 'issues guidance warning for next quarter.', effect: -0.06 },
+                { category: 'RUMOUR', colorClass: 'type-rumour', text: 'Whispers of a hostile takeover bid circulate.', effect: 0.07 },
+                { category: 'RUMOUR', colorClass: 'type-rumour', text: 'Speculation mounts about a flagship product delay.', effect: -0.04 },
+                { category: 'NEWS', colorClass: 'type-news', text: 'Industry sector outlook upgraded by major analysts.', effect: 0.02 },
+                { category: 'NEWS', colorClass: 'type-news', text: 'Supply chain disruptions reported in the sector.', effect: -0.02 }
+            ];
+
+            for (let i = 0; i < 40; i++) { 
+                const ticker = tickers[Math.floor(Math.random() * tickers.length)];
+                const template = eventTemplates[Math.floor(Math.random() * eventTemplates.length)];
+                const finalEffect = template.effect * (Math.random() > 0.5 ? 1 : 0.8); 
+                news.push({ ticker, category: template.category, text: template.text, effect: finalEffect, colorClass: template.colorClass });
+            }
+            return news.sort(() => Math.random() - 0.5);
+        }
+
+        fireNewsEvent() {
+            if (!this.marketOpen || this.newsEvents.length === 0) return;
+
+            this.generateGlobalNews(); 
+
+            for (let i = 0; i < this.newsPerTick; i++) {
+                const event = this.newsEvents.shift(); 
+                if (!event) { this.newsEvents = this.generateNewsEvents(); break; }
+                
+                const asset = this.assets[event.ticker];
+                if (asset) {
+                    const priceChange = asset.price * event.effect;
+                    asset.price = clamp(asset.price + priceChange, 0.01, 5000.00);
+                    this.log(`[${event.category}] ${asset.name} (${event.ticker}) ${event.text}`, event.colorClass);
+                }
+                if (this.newsEvents.length < 5) this.newsEvents = this.newsEvents.concat(this.generateNewsEvents());
+            }
+        }
+
+        log(message, className = 'color-gray') {
+            const outputContainer = document.getElementById('output-container');
+            if (!outputContainer) return;
+            const timeStr = `${String(this.hours).padStart(2, '0')}:${String(this.minutes).padStart(2, '0')}`;
+            const logElement = document.createElement('div');
+            logElement.className = `log-message ${className}`;
+            logElement.innerHTML = `<span class="text-gray-500 text-xs mr-2">${timeStr}</span>${message}`;
+            outputContainer.prepend(logElement);
+        }
+
+        updateStatusUI() {
+            const totalHoldingsValue = Object.entries(this.holdings).reduce((total, [ticker, holding]) => {
+                return total + calculateValue(this.assets[ticker].price, holding.quantity);
+            }, 0);
+            
+            const netWorth = (this.cash + totalHoldingsValue) - this.marginAccount;
+            const maxAllowedMargin = netWorth * this.marginLimitRatio; // 50% of Net Worth
+            const availableMargin = maxAllowedMargin - this.marginAccount;
+            
+            const currentMarketCap = Object.values(this.assets).reduce((acc, asset) => acc + (asset.price * 1000), 0);
+            this.bot100Index = (currentMarketCap / this.initialMarketCap) * 1000;
+            
+            // Margin Call Logic
+            const marginThreshold = netWorth * 0.50;
+            this.isMarginCalled = false;
+            let marginCallStatus = "";
+
+            if (this.marginAccount > marginThreshold) {
+                this.isMarginCalled = true;
+                const overage = this.marginAccount - marginThreshold;
+                marginCallStatus = `<span class="color-red font-bold">🚨 MARGIN CALL! Debt > 50% Net Worth. Pay ${formatCurrency(overage)}. TICKS LEFT: ${3 - this.marginCallTicks}</span>`;
+            } else {
+                this.marginCallTicks = 0; // Reset if resolved
+            }
+            
+            const dailyCostEstimate = this.marginAccount * this.dailyInterestRate;
+
+            // UI Updates
+            document.getElementById('market-day').textContent = this.day;
+            document.getElementById('market-status').textContent = this.marketOpen ? 'OPEN' : 'CLOSED';
+            document.getElementById('market-status').className = this.marketOpen ? 'font-bold color-green' : 'font-bold text-red-500';
+            document.getElementById('bot-index').textContent = Math.round(this.bot100Index); 
+
+            const valueClass = netWorth >= this.initialCash ? 'text-green-400' : 'text-red-400';
+            document.getElementById('portfolio-net-worth').textContent = formatCurrency(netWorth);
+            document.getElementById('portfolio-net-worth').className = `font-mono ${valueClass}`;
+            document.getElementById('portfolio-cash').textContent = formatCurrency(this.cash);
+            document.getElementById('portfolio-margin-account').textContent = formatCurrency(this.marginAccount);
+            document.getElementById('portfolio-available-margin').textContent = formatCurrency(clamp(availableMargin, 0, Infinity));
+            document.getElementById('portfolio-loan-cost').textContent = formatCurrency(dailyCostEstimate);
+            document.getElementById('portfolio-margin-call').innerHTML = marginCallStatus;
+            
+            // Holdings List
+            const holdingsDiv = document.getElementById('portfolio-holdings');
+            holdingsDiv.innerHTML = '';
+            let hasHoldings = false;
+            for (const [ticker, holding] of Object.entries(this.holdings)) {
+                if (holding.quantity > 0) {
+                    hasHoldings = true;
+                    const price = this.assets[ticker]?.price;
+                    const val = calculateValue(price, holding.quantity);
+                    const p = document.createElement('p');
+                    p.innerHTML = `<span class="font-bold">${ticker} (${holding.quantity})</span> @ ${formatCurrency(holding.avgCost)} (Value: ${formatCurrency(val)})`;
+                    holdingsDiv.appendChild(p);
+                }
+            }
+            if (!hasHoldings) holdingsDiv.innerHTML = '<p class="text-gray-500">No current holdings.</p>';
+        }
+
+        updateTicker() {
+            const tickerContent = document.getElementById('ticker-content');
+            if (!tickerContent) return;
+
+            let html = "";
+            if (this.activeGlobalNews) {
+                html += `<span class="ticker-item ticker-global">*** ${this.activeGlobalNews} ***</span>`;
+            }
+            for (const [t, asset] of Object.entries(this.assets)) {
+                const changeClass = asset.change >= 0 ? 'ticker-up' : 'ticker-down';
+                const symbol = asset.change >= 0 ? '▲' : '▼';
+                html += `<span class="ticker-item">${t}: ${formatCurrency(asset.price)} <span class="${changeClass}">(${symbol}${asset.change.toFixed(2)}%)</span></span>`;
+            }
+            tickerContent.innerHTML = html;
+        }
+
+        updatePriceTable() {
+            const tableBody = document.getElementById('price-table-body');
+            tableBody.innerHTML = '';
+            for (const [ticker, asset] of Object.entries(this.assets)) {
+                const changeClass = asset.change > 0 ? 'color-green' : (asset.change < 0 ? 'color-red' : 'color-gray');
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-800 last:border-b-0';
+                row.innerHTML = `
+                    <td class="py-1 font-bold">${ticker}</td>
+                    <td class="py-1 text-gray-400">${asset.sector.substring(0, 4)}</td>
+                    <td class="py-1 text-right font-mono">${formatCurrency(asset.price)}</td>
+                    <td class="py-1 text-right ${changeClass} font-mono">${asset.change > 0 ? '+' : ''}${asset.change.toFixed(2)}%</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+
+        tick() {
+            this.marketTicks++;
+            this.seconds = 0; 
+            this.minutes += this.simulatedMinutesPerTick;
+            if (this.minutes >= 60) { this.minutes -= 60; this.hours++; }
+            
+            this.marketOpen = (this.hours >= 9 && this.hours < 16);
+
+            // Day End Logic
+            if (this.hours >= 16) {
+                this.marketOpen = false;
+                if (this.hours === 16 && this.minutes < this.simulatedMinutesPerTick) 
+                     this.log("MARKET CLOSED for the day.", 'color-yellow');
+                
+                if (this.hours === 17 && this.minutes < this.simulatedMinutesPerTick) {
+                    if (this.marginAccount > 0) {
+                        const interest = this.marginAccount * this.dailyInterestRate; 
+                        this.marginAccount += interest;
+                        this.log(`Daily Interest of ${formatCurrency(interest)} accrued.`, 'color-red');
+                    }
+                    this.day++;
+                    this.hours = 9; 
+                    this.minutes = 0; 
+                    
+                    if (this.day > 30) {
+                        this.endSimulation("GAME OVER: 30 Days Reached.");
+                        return;
+                    }
+
+                    this.indexHistory = [this.bot100Index]; 
+                    this.chart.data.labels = ["09:00"];
+                    this.chart.data.datasets[0].data = this.indexHistory;
+                    this.chart.update();
+                    this.log(`--- DAY ${this.day} START --- Market is OPEN!`, 'color-blue');
+                }
+            }
+
+            const timeStr = `${String(this.hours).padStart(2, '0')}:${String(this.minutes).padStart(2, '0')}`;
+            document.getElementById('market-time').textContent = timeStr;
+
+            if (this.marketOpen) {
+                // --- MARGIN ARREST LOGIC ---
+                this.updateStatusUI(); // update margin flags
+                if (this.isMarginCalled) {
+                    this.marginCallTicks++;
+                    this.log(`WARNING: Margin Call active for ${this.marginCallTicks}/3 ticks. Pay immediately or face arrest!`, 'type-alert');
+                    if (this.marginCallTicks >= 3) {
+                        this.endSimulation("ARRESTED: Failed to meet margin call. Game Over.");
+                        return;
+                    }
+                } else {
+                    this.marginCallTicks = 0;
+                }
+
+                for (const [ticker, asset] of Object.entries(this.assets)) {
+                    const rawChange = getRandomChange(asset.volatility * this.simulatedMinutesPerTick); 
+                    let newPrice = asset.price * (1 + rawChange);
+                    newPrice = clamp(newPrice, 0.01, 5000.00); 
+                    asset.change = ((newPrice - asset.price) / asset.price) * 100;
+                    asset.price = newPrice;
+                }
+                this.fireNewsEvent(); 
+                this.updateStatusUI();
+                this.updatePriceTable();
+                this.updateChart(); 
+                this.updateTicker(); 
+            } else {
+                this.updateStatusUI(); 
+            }
+        }
+
+        endSimulation(reason) {
+            if (this.simulationInterval) clearInterval(this.simulationInterval);
+            this.simulationInterval = null;
+            this.marketOpen = false;
+            this.log("--- SIMULATION ENDED ---", 'color-red');
+            this.log(reason, 'type-alert');
+            document.getElementById('market-status').textContent = "TERMINATED";
+            document.getElementById('command-input').disabled = true;
+        }
+
+        updateChart() {
+            let timeLabel = `${String(this.hours).padStart(2, '0')}:${String(this.minutes).padStart(2, '0')}`;
+            this.indexHistory.push(this.bot100Index);
+            this.chart.data.labels.push(timeLabel);
+            this.chart.data.datasets[0].data = this.indexHistory;
+            this.chart.update('none');
+        }
+
+        runSimulation() {
+            if (this.simulationInterval) clearInterval(this.simulationInterval);
+            this.simulationInterval = setInterval(() => this.tick(), this.simulationSpeedMs);
+            this.log(`Simulation started.`, 'color-blue');
+        }
+
+        executeCommand(command) {
+            const parts = command.trim().toUpperCase().split(/\s+/);
+            const action = parts[0];
+            const ticker = parts[1];
+            let quantity = parseFloat(parts[2]);
+            let amount = parseFloat(parts[1]); 
+
+            // Command Parsing...
+            // ...
+
+            switch (action) {
+                case 'BORROW':
+                    if (this.isMarginCalled) { this.log(`Cannot BORROW during Margin Call.`, 'color-red'); return; }
+                    this.updateStatusUI(); 
+                    const availableMargin = parseFloat(document.getElementById('portfolio-available-margin').textContent.replace(/[^0-9.]/g, ''));
+                    if (amount > availableMargin) { this.log(`Borrow limit exceeded.`, 'color-red'); return; }
+                    this.cash += amount;
+                    this.marginAccount += amount;
+                    this.log(`BORROWED ${formatCurrency(amount)}.`, 'color-yellow');
+                    this.updateStatusUI();
+                    break;
+
+                case 'PAY':
+                    if (amount > this.marginAccount) amount = this.marginAccount; 
+                    if (this.cash < amount) { this.log(`Insufficient cash.`, 'color-red'); return; }
+                    if (amount === 0) { this.log(`No debt to pay.`, 'color-yellow'); return; }
+                    this.cash -= amount;
+                    this.marginAccount -= amount;
+                    this.log(`PAID ${formatCurrency(amount)} debt.`, 'color-green');
+                    this.updateStatusUI();
+                    break;
+
+                case 'BUY':
+                    if (this.isMarginCalled) { this.log(`BUY blocked by Margin Call.`, 'color-red'); return; }
+                    if (!this.marketOpen) { this.log(`Market is CLOSED.`, 'color-red'); return; }
+                    if (!ticker || isNaN(quantity) || !this.assets[ticker]) { this.log(`Invalid syntax.`, 'color-red'); return; }
+
+                    const buyPrice = this.assets[ticker].price;
+                    const cost = calculateValue(buyPrice, quantity);
+                    const commission = cost * this.commissionRate;
+                    const totalCost = cost + commission;
+                    
+                    this.updateStatusUI(); 
+                    const buyingPower = this.cash + parseFloat(document.getElementById('portfolio-available-margin').textContent.replace(/[^0-9.]/g, ''));
+
+                    if (totalCost > buyingPower) { this.log(`Insufficient buying power.`, 'color-red'); return; }
+                    
+                    let amountToBorrow = 0;
+                    if (totalCost > this.cash) {
+                        amountToBorrow = totalCost - this.cash;
+                        this.cash = 0;
+                        this.marginAccount += amountToBorrow;
+                        this.log(`Auto-borrowed ${formatCurrency(amountToBorrow)}.`, 'color-yellow');
+                    } else {
+                        this.cash -= totalCost;
+                    }
+
+                    const currentHolding = this.holdings[ticker] || { quantity: 0, avgCost: 0 };
+                    const newTotalQuantity = currentHolding.quantity + quantity;
+                    const newAvgCost = ((currentHolding.quantity * currentHolding.avgCost) + cost) / newTotalQuantity;
+                    this.holdings[ticker] = { quantity: newTotalQuantity, avgCost: newAvgCost };
+                    
+                    this.log(`BOUGHT ${quantity} ${ticker} @ ${formatCurrency(buyPrice)}. Total: ${formatCurrency(totalCost)} (incl. ${formatCurrency(commission)} comm).`, 'color-green');
+                    this.updateStatusUI();
+                    break;
+
+                case 'SELL':
+                    if (!this.marketOpen) { this.log(`Market is CLOSED.`, 'color-red'); return; }
+                    if (!ticker || isNaN(quantity) || !this.assets[ticker]) { this.log(`Invalid syntax.`, 'color-red'); return; }
+
+                    const holding = this.holdings[ticker];
+                    if (!holding || holding.quantity < quantity) { this.log(`Insufficient shares.`, 'color-red'); return; }
+                    
+                    const sellPrice = this.assets[ticker].price;
+                    const proceeds = calculateValue(sellPrice, quantity);
+                    const sellCommission = proceeds * this.commissionRate;
+                    const netProceeds = proceeds - sellCommission;
+
+                    this.cash += netProceeds;
+                    holding.quantity -= quantity;
+                    this.log(`SOLD ${quantity} ${ticker} @ ${formatCurrency(sellPrice)}. Net: ${formatCurrency(netProceeds)} (deducted ${formatCurrency(sellCommission)} comm).`, 'color-green');
+                    if (holding.quantity === 0) delete this.holdings[ticker];
+                    this.updateStatusUI();
+                    break;
+
+                case 'LIST':
+                case 'HELP':
+                    this.log("--- COMMANDS ---", 'color-yellow');
+                    this.log("BUY [TKR] [QTY], SELL [TKR] [QTY], BORROW [AMT], PAY [AMT], PORTFOLIO, PRICES", 'color-gray');
+                    break;
+                
+                case 'PORTFOLIO':
+                    this.updateStatusUI(); 
+                    this.log(`NET WORTH: ${document.getElementById('portfolio-net-worth').textContent}`, 'color-green');
+                    this.log(`MARGIN ACCOUNT: ${document.getElementById('portfolio-margin-account').textContent}`, 'color-red');
+                    break;
+
+                case 'PRICES':
+                    for (const [t, a] of Object.entries(this.assets)) 
+                        this.log(`${t}: ${formatCurrency(a.price)}`, 'color-gray');
+                    break;
+
+                default: this.log(`Unknown command.`, 'color-gray'); break;
+            }
+        }
+    }
+
+    function handleCommandSubmit(event) {
+        event.preventDefault();
+        const inputElement = document.getElementById('command-input');
+        const command = inputElement.value;
+        if (command && game) {
+            game.executeCommand(command);
+            inputElement.value = '';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        game = new MarketEngine(); 
+        document.getElementById('command-form').addEventListener('submit', handleCommandSubmit);
+        game.updateStatusUI();
+        game.runSimulation();
+        game.log(`--- DAY ${game.day} START ---`, 'color-blue');
+    });
+
+</script>
+</body>
+</html>
