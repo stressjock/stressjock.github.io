@@ -141,14 +141,14 @@
                 title: "Forensic Analysis of Internet Photos",
                 description: "Residual noise and 2D FFT Python script to identify AI versus real photos online.",
                 tech: ["Python"],
-          //    demoLink: "#",
+                // This project does not have a live demo, so demoLink is omitted (undefined)
                 repoLink: "https://github.com/stressjock/forensic_analyser"
             },
             {
                 title: "AI-Powered Text Summarizer",
                 description: "A web utility that leverages a Language Model API to condense large articles into concise summaries.",
                 tech: ["Python", "API Integration", "HTML/Tailwind"],
-                demoLink: "#",
+                demoLink: "#", // Placeholder: The conditional logic below will hide the button if demoLink is "#"
                 repoLink: "https://github.com/your-username/ai-summarizer"
             },
         ];
@@ -167,6 +167,18 @@
                     `<span class="text-xs font-medium bg-sky-900/40 text-sky-300 px-2 py-1 rounded-full">${tag}</span>`
                 ).join('');
 
+                // Conditional logic to determine if the Live Demo button should be shown
+                const hasDemoLink = project.demoLink && project.demoLink !== '#';
+
+                const demoButtonHtml = hasDemoLink ? `
+                    <a href="${project.demoLink}" target="_blank" class="flex-1 cinematic-btn text-center py-2 rounded-lg">
+                        Live Demo
+                    </a>
+                ` : '';
+
+                // Adjust the Repository button class based on the existence of the demo link
+                const repoButtonClass = hasDemoLink ? 'flex-1' : 'w-full';
+
                 const cardHtml = `
                     <div class="project-card p-6 rounded-xl">
                         <h3 class="text-2xl font-bold mb-2 text-sky-400">${project.title}</h3>
@@ -177,10 +189,8 @@
                         </div>
 
                         <div class="flex space-x-4">
-                            <a href="${project.demoLink}" target="_blank" class="flex-1 cinematic-btn text-center py-2 rounded-lg">
-                                Live Demo
-                            </a>
-                            <a href="${project.repoLink}" target="_blank" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-center py-2 rounded-lg transition duration-300">
+                            ${demoButtonHtml}
+                            <a href="${project.repoLink}" target="_blank" class="${repoButtonClass} bg-gray-700 hover:bg-gray-600 text-white text-center py-2 rounded-lg transition duration-300">
                                 Repository
                             </a>
                         </div>
@@ -219,9 +229,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
