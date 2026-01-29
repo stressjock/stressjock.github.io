@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIN // STRESS INTEGRATION NEXUS</title>
+<style>
+    :root { 
+        --accent: #3b82f6; 
+        --text: #e5e7eb; 
+        --bg: #020617; 
+        --intel-scroll: #ffff00; 
+        --aviation-scroll: #ff8c00; 
+        --finance-scroll: #00ff00;
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Courier New", monospace; padding-bottom: 110px; overflow-x: hidden; }
+    
+    /* CRT SCANLINE EFFECT */
+    body::before {
+        content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+        z-index: 2000; background-size: 100% 3px, 3px 100%; pointer-events: none;
+    }
+
+    header { padding: 15px 20px; background: #0f172a; border-bottom: 3px double var(--accent); display: flex; justify-content: space-between; align-items: center; color: var(--accent); }
+    #header-date { font-size: 11px; color: #94a3b8; }
+
+    /* SETTINGS MODAL */
+    #settings-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid var(--accent); padding: 20px; z-index: 3000; width: 550px; box-shadow: 0 0 30px #000; max-height: 85vh; overflow-y: auto; }
+    .setting-section { margin-bottom: 20px; font-size: 11px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .cam-input { width: 100%; background: #020617; border: 1px solid #334155; color: #fff; font-family: inherit; font-size: 10px; padding: 4px; margin-top: 4px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .file-btn { flex: 1; padding: 8px; background: #1e293b; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-size: 10px; font-weight: bold; }
+
+    /* TABLE */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead { background: #111827; border-bottom: 2px solid var(--accent); }
+    th { padding: 10px; font-size: 10px; color: #94a3b8; text-align: left; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+
+    .city-cell { display: flex; align-items: center; gap: 12px; }
+    .city-name { color: var(--accent); font-weight: bold; text-transform: uppercase; font-size: 13px; min-width: 130px; }
+    .cam-trigger { font-size: 10px; padding: 4px 8px; background: #1e293b; border: 1px solid var(--accent); color: var(--accent); cursor: pointer; text-decoration: none; }
+
+    .time { font-size: 18px; color: #fff; }
+    .dst-status { font-size: 9px; color: #475569; font-weight: bold; margin-top: 2px; text-transform: uppercase; }
+    .weather { font-size: 11px; color: #94a3b8; line-height: 1.3; text-transform: uppercase; }
+    .news div { background: rgba(30, 41, 59, 0.4); padding: 4px; margin-bottom: 4px; border-left: 2px solid var(--accent); font-size: 11px; text-transform: uppercase; }
+
+    /* TICKER STYLES */
+    .ticker-container { position: fixed; width: 100%; display: flex; align-items: center; z-index: 1000; height: 30px; border-top: 1px solid rgba(255,255,255,0.1); }
+    #ticker-intel { bottom: 60px; background: #020617; color: var(--intel-scroll); }
+    #ticker-aviation { bottom: 30px; background: #020617; color: var(--aviation-scroll); border-top: 1px solid var(--aviation-scroll); }
+    #ticker-finance { bottom: 0; background: #020617; color: var(--finance-scroll); border-top: 1px solid var(--finance-scroll); }
+    
+    .ticker-label { padding: 0 10px; font-size: 10px; font-weight: bold; height: 100%; display: flex; align-items: center; background: rgba(0,0,0,0.5); border-right: 1px solid currentColor; }
+    .ticker-wrap { overflow: hidden; width: 100%; white-space: nowrap; }
+    
+    .ticker-move { display: inline-block; animation: ticker-kf 240s linear infinite; }
+    #aviation-move { animation: ticker-kf 288s linear infinite; }
+    #finance-move { animation: ticker-kf 260s linear infinite; }
+    .ticker-item { display: inline-block; padding: 0 60px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+    
+    @keyframes ticker-kf { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+</style>
+</head>
+<body>
+
+<header>
+    <span>SIN // STRESS INTEGRATION NEXUS v1.07 VIBED BY: A.B.</span>
+    <span id="header-date"></span>
+    <button onclick="toggleSettings()" style="background:#1e293b; color:var(--accent); border:1px solid var(--accent); font-size:10px; padding:4px 10px; cursor:pointer;">[ CONFIG ]</button>
+</header>
+
+<div id="settings-modal">
+    <div style="font-weight:bold; color:var(--accent); margin-bottom:10px;">SYSTEM CONFIGURATION</div>
+    
+    <div class="setting-section">
+        <strong>FILE UPLINK/DOWNLINK:</strong>
+        <div class="btn-row">
+            <button class="file-btn" onclick="exportToFile()">EXPORT SETTINGS (.JSON)</button>
+            <button class="file-btn" onclick="document.getElementById('file-input').click()">IMPORT SETTINGS</button>
+            <input type="file" id="file-input" style="display:none" onchange="importFromFile(event)">
+        </div>
+    </div>
+
+    <div class="setting-section">
+        <strong>COLORS:</strong><br>
+        Accent <input type="color" id="color-accent" value="#3b82f6" onchange="updateUI()">
+        Intel <input type="color" id="color-intel" value="#ffff00" onchange="updateUI()">
+        Aviation <input type="color" id="color-aviation" value="#ff8c00" onchange="updateUI()">
+        Finance <input type="color" id="color-finance" value="#00ff00" onchange="updateUI()">
+    </div>
+
+    <div class="setting-section">
+        <strong>SECTOR UPLINKS:</strong>
+        <div id="cam-inputs-list"></div>
+    </div>
+
+    <div class="setting-section" id="city-toggles">
+        <strong>ACTIVE SECTORS:</strong>
+    </div>
+
+    <button onclick="toggleSettings()" style="width:100%; padding:10px; background:var(--accent); color:#000; border:none; font-family:inherit; font-weight:bold; cursor:pointer;">CLOSE & APPLY</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 250px;">Sector / Live Feed</th>
+            <th style="width: 150px;">Local Time</th>
+            <th style="width: 150px;">Atmospherics</th>
+            <th>Regional Intel Report</th>
+        </tr>
+    </thead>
+    <tbody id="data-table"></tbody>
+</table>
+
+<div class="ticker-container" id="ticker-intel">
+    <div class="ticker-label">INTEL</div>
+    <div class="ticker-wrap"><div class="ticker-move" id="intel-move">LOADING...</div></div>
+</div>
+
+<div class="ticker-container" id="ticker-aviation">
+    <div class="ticker-label">AVIATION</div>
+    <div class="ticker-wrap"><div class="ticker-move" id="aviation-move">SCANNING...</div></div>
+</div>
+
+<div class="ticker-container" id="ticker-finance">
+    <div class="ticker-label">FINANCE</div>
+    <div class="ticker-wrap"><div class="ticker-move" id="finance-move">MONITORING MARKETS...</div></div>
+</div>
+
+<script>
+const cities = [
+    { name: "Belfast", zone: "Europe/Belfast", lat: 54.59, lon: -5.93, qCity: "Belfast", qCountry: "Northern Ireland", defaultLink: "https://www.trafficwatchni.com/twni/cameras/static?id=193" },
+    { name: "Kyiv", zone: "Europe/Kyiv", lat: 50.45, lon: 30.52, qCity: "Kyiv", qCountry: "Ukraine", defaultLink: "https://www.youtube.com/watch?v=R-qCsZ1obbc" },
+    { name: "Udine", zone: "Europe/Rome", lat: 46.06, lon: 13.23, qCity: "Udine", qCountry: "Italy", defaultLink: "https://udine.panomax.com/" },
+    { name: "London", zone: "Europe/London", lat: 51.50, lon: -0.12, qCity: "London", qCountry: "United Kingdom", defaultLink: "https://www.youtube.com/watch?v=Lxqcg1qt0XU" },
+    { name: "Paris", zone: "Europe/Paris", lat: 48.85, lon: 2.35, qCity: "Paris", qCountry: "France", defaultLink: "https://www.youtube.com/watch?v=OzYp4NRZlwQ" },
+    { name: "Querétaro", zone: "America/Mexico_City", lat: 20.58, lon: -100.38, qCity: "Querétaro", qCountry: "Mexico", defaultLink: "https://www.youtube.com/watch?v=Qm2ENkgMgUE" },
+    { name: "New York", zone: "America/New_York", lat: 40.71, lon: -74.00, qCity: "New York", qCountry: "USA", defaultLink: "https://www.youtube.com/watch?v=VGnFLdQW39A" },
+    { name: "Seattle", zone: "America/Los_Angeles", lat: 47.60, lon: -122.33, qCity: "Seattle", qCountry: "Washington", defaultLink: "https://www.youtube.com/watch?v=OuDe2uBrYIQ" },
+    { name: "Tehran", zone: "Asia/Tehran", lat: 35.68, lon: 51.38, qCity: "Tehran", qCountry: "Iran", defaultLink: "https://www.youtube.com/watch?v=-zGuR1qVKrU" },
+    { name: "Montréal", zone: "America/Toronto", lat: 45.50, lon: -73.56, qCity: "Montréal", qCountry: "Canada", defaultLink: "https://www.youtube.com/watch?v=azXXRr-oIBA" },
+    { name: "Ottawa", zone: "America/Toronto", lat: 45.42, lon: -75.69, qCity: "Ottawa", qCountry: "Canada", defaultLink: "https://www.youtube.com/watch?v=lLYosWv_AwQ" },
+    { name: "Toronto", zone: "America/Toronto", lat: 43.65, lon: -79.38, qCity: "Toronto", qCountry: "Canada", defaultLink: "https://www.youtube.com/watch?v=jwHkDXvIo10" },
+    { name: "Calgary", zone: "America/Edmonton", lat: 51.04, lon: -114.05, qCity: "Calgary", qCountry: "Canada", defaultLink: "https://www.youtube.com/watch?v=MwcqP3ta6RI" },
+    { name: "Los Angeles", zone: "America/Los_Angeles", lat: 34.05, lon: -118.24, qCity: "Los Angeles", qCountry: "USA", defaultLink: "https://www.youtube.com/watch?v=3LXQWU67Ufk" },
+    { name: "Vancouver", zone: "America/Vancouver", lat: 49.28, lon: -123.12, qCity: "Vancouver", qCountry: "Canada", defaultLink: "https://www.youtube.com/watch?v=rxyNjFKwzJA" },
+    { name: "Hong Kong", zone: "Asia/Hong_Kong", lat: 22.31, lon: 114.16, qCity: "Hong Kong", qCountry: "China", defaultLink: "https://www.youtube.com/watch?v=zKwsoCxqRRE" }
+];
+
+const wmoCodes = { 
+    0: "CLEAR", 
+    1: "MAINLY CLEAR", 
+    2: "PARTLY CLOUDY", 
+    3: "OVERCAST", 
+    45: "FOG", 48: "FREEZING FOG",
+    51: "LIGHT DRIZZLE", 53: "MODERATE DRIZZLE", 55: "HEAVY DRIZZLE",
+    61: "LIGHT RAIN", 63: "MODERATE RAIN", 65: "HEAVY RAIN",
+    71: "LIGHT SNOW", 73: "MODERATE SNOW", 75: "HEAVY SNOW", 
+    77: "SNOW GRAINS",
+    80: "LIGHT SHOWERS", 81: "MODERATE SHOWERS", 82: "HEAVY SHOWERS",
+    85: "LIGHT SNOW SHOWERS", 86: "HEAVY SNOW SHOWERS",
+    95: "THUNDERSTORM" 
+};
+
+function isEnglish(text) { return /^[\x00-\x7F]*$/.test(text); }
+
+async function fetchGdelt(query, limit=5) {
+    try {
+        const res = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}+sourcelang:english&mode=ArtList&maxrecords=${limit}&format=json`);
+        const data = await res.json();
+        return (data.articles || []).filter(a => isEnglish(a.title));
+    } catch { return []; }
+}
+
+function exportToFile() {
+    const config = { 
+        accent: document.getElementById('color-accent').value, 
+        intel: document.getElementById('color-intel').value, 
+        aviation: document.getElementById('color-aviation').value, 
+        finance: document.getElementById('color-finance').value,
+        links: {}, 
+        visibility: {} 
+    };
+    cities.forEach(c => {
+        const safeName = c.name.replace(/\s/g, '');
+        config.links[c.name] = document.getElementById(`link-input-${safeName}`).value;
+        config.visibility[c.name] = document.getElementById(`row-${safeName}`).style.display !== 'none';
+    });
+    const blob = new Blob([JSON.stringify(config, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = "sin_config.json"; a.click();
+}
+
+function importFromFile(event) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const config = JSON.parse(e.target.result);
+            document.getElementById('color-accent').value = config.accent || "#3b82f6";
+            document.getElementById('color-intel').value = config.intel || "#ffff00";
+            document.getElementById('color-aviation').value = config.aviation || "#ff8c00";
+            document.getElementById('color-finance').value = config.finance || "#00ff00";
+            cities.forEach(c => {
+                const safeName = c.name.replace(/\s/g, '');
+                if (config.links[c.name]) document.getElementById(`link-input-${safeName}`).value = config.links[c.name];
+                const isVisible = config.visibility[c.name] !== false;
+                document.getElementById(`row-${safeName}`).style.display = isVisible ? '' : 'none';
+                const cb = document.querySelector(`#cb-${safeName}`); if(cb) cb.checked = isVisible;
+            });
+            updateUI();
+        } catch { alert("ERROR: INVALID CONFIG"); }
+    };
+    reader.readAsText(event.target.files[0]);
+}
+
+function updateUI() {
+    const acc = document.getElementById('color-accent').value;
+    document.documentElement.style.setProperty('--accent', acc);
+    document.documentElement.style.setProperty('--intel-scroll', document.getElementById('color-intel').value);
+    document.documentElement.style.setProperty('--aviation-scroll', document.getElementById('color-aviation').value);
+    document.documentElement.style.setProperty('--finance-scroll', document.getElementById('color-finance').value);
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('header-date').textContent = now.toUTCString().toUpperCase();
+    cities.forEach(c => {
+        const row = document.getElementById(`row-${c.name.replace(/\s/g, '')}`);
+        if(row) {
+            row.querySelector(".time").textContent = new Intl.DateTimeFormat("en-GB", { timeZone: c.zone, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now);
+            const jan = new Date(now.getFullYear(), 0, 1);
+            const janOff = new Date(jan.toLocaleString("en-US", {timeZone: c.zone})).getTimezoneOffset();
+            const nowOff = new Date(now.toLocaleString("en-US", {timeZone: c.zone})).getTimezoneOffset();
+            row.querySelector(".dst-status").textContent = (nowOff !== janOff) ? "DST ACTIVE" : "STANDARD TIME";
+        }
+    });
+}
+
+async function refreshData() {
+    cities.forEach(async c => {
+        const row = document.getElementById(`row-${c.name.replace(/\s/g, '')}`);
+        try {
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current_weather=true`);
+            const wData = await wRes.json();
+            row.querySelector(".weather").innerHTML = `<strong>${wmoCodes[wData.current_weather.weathercode] || "STABLE"}</strong><br>${wData.current_weather.temperature}°C<br>WIND: ${wData.current_weather.windspeed} KM/H`;
+        } catch { }
+
+        let articles = await fetchGdelt(c.qCity, 3);
+        if (articles.length < 2) articles = articles.concat(await fetchGdelt(c.qCountry, 3));
+        if (articles.length < 2) articles = articles.concat(await fetchGdelt("aviation aircraft airline", 3));
+        
+        row.querySelector(".news").innerHTML = articles.slice(0,2).map(a => `<div>${a.title}</div>`).join("");
+    });
+
+    const intel = await fetchGdelt("(military OR geopolitics OR war)", 40);
+    const intelHtml = intel.map(a => `<span class="ticker-item">[INTEL] ${a.title}</span>`).join("");
+    document.getElementById('intel-move').innerHTML = intelHtml + intelHtml;
+
+    const avia = await fetchGdelt("(business jets OR aircraft OR airline industry)", 40);
+    const aviaHtml = avia.map(a => `<span class="ticker-item">[AVIATION] ${a.title}</span>`).join("");
+    document.getElementById('aviation-move').innerHTML = aviaHtml + aviaHtml;
+
+    const finance = await fetchGdelt("(stock market OR economy OR inflation OR gdp OR interest rates)", 40);
+    const financeHtml = finance.map(a => `<span class="ticker-item">[FINANCE] ${a.title}</span>`).join("");
+    document.getElementById('finance-move').innerHTML = financeHtml + financeHtml;
+}
+
+function init() {
+    const table = document.getElementById('data-table');
+    const toggles = document.getElementById('city-toggles');
+    const linksList = document.getElementById('cam-inputs-list');
+    cities.forEach(c => {
+        const safeName = c.name.replace(/\s/g, '');
+        const tr = document.createElement('tr');
+        tr.id = `row-${safeName}`;
+        tr.innerHTML = `<td><div class="city-cell"><button class="cam-trigger" onclick="openCam('${safeName}')">[CAM]</button><span class="city-name">${c.name}</span></div></td><td><div class="time"></div><div class="dst-status"></div></td><td class="weather"></td><td class="news"></td>`;
+        table.appendChild(tr);
+        toggles.innerHTML += `<label style="display:block;margin:3px 0"><input type="checkbox" id="cb-${safeName}" checked onchange="document.getElementById('row-${safeName}').style.display=this.checked?'':'none';"> ${c.name.toUpperCase()}</label>`;
+        linksList.innerHTML += `${c.name}:<br><input type="text" id="link-input-${safeName}" class="cam-input" value="${c.defaultLink}"><br>`;
+    });
+    updateUI(); setInterval(updateClock, 1000); refreshData(); setInterval(refreshData, 900000);
+}
+function toggleSettings() { const m = document.getElementById('settings-modal'); m.style.display = (m.style.display==='block')?'none':'block'; }
+function openCam(s) { const u = document.getElementById(`link-input-${s}`).value; if(u) window.open(u, '_blank'); }
+init();
+</script>
+</body>
+</html>
