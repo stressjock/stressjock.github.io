@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIN // STRESS INTEGRATION NEXUS v124</title>
+<style>
+    :root { 
+        --accent: #3b82f6; 
+        --text: #e5e7eb; 
+        --bg: #020617; 
+        --intel-scroll: #ffff00; 
+        --aviation-scroll: #ff8c00; 
+        --finance-scroll: #00ff00;
+        --pulse-color: #10b981;
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Courier New", monospace; padding-bottom: 110px; overflow-x: hidden; }
+    
+    /* CRT SCANLINE EFFECT */
+    body::before {
+        content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+        z-index: 2000; background-size: 100% 3px, 3px 100%; pointer-events: none; opacity: 0.15;
+    }
+
+    header { padding: 15px 20px; background: #0f172a; border-bottom: 3px double var(--accent); display: flex; justify-content: space-between; align-items: center; color: var(--accent); }
+    #header-date { font-size: 11px; color: #94a3b8; }
+    
+    .matrix-switcher {
+        background: #0f172a; padding: 8px; border-bottom: 1px solid var(--accent);
+        display: flex; gap: 10px; justify-content: center; z-index: 100; position: relative;
+    }
+    .matrix-btn {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: var(--accent);
+        font-family: inherit; font-size: 9px; padding: 4px 12px; cursor: pointer; font-weight: bold;
+    }
+    .matrix-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+
+    .global-monitor {
+        width: 100%; height: 420px; background: #000; border-bottom: 2px solid var(--accent);
+        position: relative; overflow: hidden;
+    }
+    .global-monitor iframe { width: 100%; height: 100%; border: none; filter: saturate(1.3) brightness(0.7) contrast(1.1); }
+    
+    .monitor-overlay {
+        position: absolute; top: 15px; left: 15px; background: rgba(15, 23, 42, 0.9);
+        color: var(--accent); padding: 5px 12px; font-size: 10px; font-weight: bold;
+        border: 1px solid var(--accent); z-index: 10; letter-spacing: 1px;
+    }
+
+    .pulse-indicator { 
+        width: 10px; height: 10px; 
+        background-color: var(--pulse-color); 
+        border-radius: 50%; 
+        box-shadow: 0 0 10px var(--pulse-color); 
+        animation: heartbeat 2s infinite ease-in-out; 
+    }
+    @keyframes heartbeat { 
+        0% { opacity: 1; transform: scale(1); } 
+        50% { opacity: 0.3; transform: scale(0.8); } 
+        100% { opacity: 1; transform: scale(1); } 
+    }
+
+    #settings-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid var(--accent); padding: 20px; z-index: 3000; width: 550px; box-shadow: 0 0 30px #000; max-height: 85vh; overflow-y: auto; }
+    .setting-section { margin-bottom: 20px; font-size: 11px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .cam-input { width: 100%; background: #020617; border: 1px solid #334155; color: #fff; font-family: inherit; font-size: 10px; padding: 4px; margin-top: 4px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .file-btn { flex: 1; padding: 8px; background: #1e293b; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-size: 10px; font-weight: bold; }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead { background: #111827; border-bottom: 2px solid var(--accent); }
+    th { padding: 10px; font-size: 10px; color: #94a3b8; text-align: left; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+
+    .city-name { color: var(--accent); font-weight: bold; text-transform: uppercase; font-size: 13px; min-width: 130px; }
+    .time { font-size: 18px; color: #fff; }
+    .weather { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+    .news div { background: rgba(30, 41, 59, 0.4); padding: 4px; margin-bottom: 4px; border-left: 2px solid var(--accent); font-size: 11px; text-transform: uppercase; }
+
+    .ticker-container { position: fixed; width: 100%; display: flex; align-items: center; z-index: 1000; height: 30px; background: #020617; }
+    #ticker-intel { bottom: 60px; color: var(--intel-scroll); border-top: 1px solid rgba(255,255,255,0.1); }
+    #ticker-aviation { bottom: 30px; color: var(--aviation-scroll); border-top: 1px solid var(--aviation-scroll); }
+    #ticker-finance { bottom: 0; color: var(--finance-scroll); border-top: 1px solid var(--finance-scroll); }
+    
+    .ticker-label { padding: 0 10px; font-size: 10px; font-weight: bold; height: 100%; display: flex; align-items: center; background: rgba(0,0,0,0.8); border-right: 1px solid currentColor; min-width: 90px; }
+    .ticker-wrap { overflow: hidden; width: 100%; white-space: nowrap; }
+    .ticker-move { display: inline-block; animation: ticker-kf 352s linear infinite; }
+    .ticker-item { display: inline-block; padding: 0 60px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+    @keyframes ticker-kf { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+</style>
+</head>
+<body>
+
+<audio id="nexus-audio" style="display:none;"></audio>
+<audio id="sfx-cam" src="Music/beep1.mp3" style="display:none;"></audio>
+<audio id="sfx-ui" src="Music/beep2.wav" style="display:none;"></audio>
+
+<header>
+    <div style="display:flex; align-items:center; gap:10px; font-weight:bold; font-size:11px;">
+        <div class="pulse-indicator"></div>
+        <span>SIN // STRESS INTEGRATION NEXUS // MONITORING // ABot v1.24</span>
+    </div>
+    <span id="header-date"></span>
+    <button onclick="playSFX('ui'); toggleSettings()" style="background:#1e293b; color:var(--accent); border:1px solid var(--accent); font-size:10px; padding:4px 10px; cursor:pointer;">[ CONFIG ]</button>
+</header>
+
+<div class="matrix-switcher">
+    <button class="matrix-btn active" onclick="playSFX('ui'); setMatrix('radar', this)">[ DOPPLER RADAR ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('satellite', this)">[ SATELLITE FEED ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('wind', this)">[ WIND VECTORS ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('temperature', this)">[ TEMPERATURE ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('flights', this)">[ AIRCRAFT TRACKER ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); window.open('https://pentagon-pizza.vercel.app/', '_blank')">[ PIZZA INTEL ]</button>
+</div>
+
+<div class="global-monitor">
+    <div class="monitor-overlay" id="matrix-label">LIVE_INTELLIGENCE: DOPPLER RADAR</div>
+    <iframe id="main-matrix-frame" src="https://embed.windy.com/embed2.html?lat=35&lon=-10&zoom=3&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=&pressure=true&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+</div>
+
+<div id="settings-modal">
+    <div style="font-weight:bold; color:var(--accent); margin-bottom:10px;">SYSTEM CONFIGURATION</div>
+    <div class="setting-section">
+        <strong>FILE UPLINK/DOWNLINK:</strong>
+        <div class="btn-row">
+            <button class="file-btn" onclick="playSFX('ui'); exportToFile()">EXPORT SETTINGS (.JSON)</button>
+            <button class="file-btn" onclick="playSFX('ui'); document.getElementById('file-input').click()">IMPORT SETTINGS</button>
+            <input type="file" id="file-input" style="display:none" onchange="importFromFile(event)">
+        </div>
+    </div>
+    <div class="setting-section">
+        <strong>COLORS:</strong><br>
+        Accent <input type="color" id="color-accent" value="#3b82f6" onchange="updateUI()">
+        Intel <input type="color" id="color-intel" value="#ffff00" onchange="updateUI()">
+        Aviation <input type="color" id="color-aviation" value="#ff8c00" onchange="updateUI()">
+        Finance <input type="color" id="color-finance" value="#00ff00" onchange="updateUI()">
+    </div>
+    <div class="setting-section">
+        <strong>SECTOR VISIBILITY:</strong><br>
+        <div id="city-toggles"></div>
+    </div>
+    <div class="setting-section">
+        <strong>LIVE CAM UPLINKS:</strong><br>
+        <div id="cam-inputs-list"></div>
+    </div>
+    <button class="file-btn" onclick="playSFX('ui'); toggleSettings()">CLOSE</button>
+</div>
+
+<table>
+    <thead>
+        <tr><th style="width:200px">SECTOR</th><th style="width:110px">TIME</th><th style="width:130px">ATMOSPHERICS</th><th>REGIONAL INTEL REPORT</th></tr>
+    </thead>
+    <tbody id="data-table"></tbody>
+</table>
+
+<div id="ticker-intel" class="ticker-container">
+    <div class="ticker-label">INTEL</div>
+    <div class="ticker-wrap"><div id="intel-move" class="ticker-move"></div></div>
+</div>
+<div id="ticker-aviation" class="ticker-container">
+    <div class="ticker-label">AVIATION</div>
+    <div class="ticker-wrap"><div id="aviation-move" class="ticker-move"></div></div>
+</div>
+<div id="ticker-finance" class="ticker-container">
+    <div class="ticker-label">FINANCE</div>
+    <div class="ticker-wrap"><div id="finance-move" class="ticker-move"></div></div>
+</div>
+
+<script>
+// --- AUDIO SYSTEM ---
+const playlist = ["Music/News1.mp3", "Music/News2.mp3", "Music/sstress.mp3"];
+let currentTrack = 0;
+let playbackStarted = false;
+const audioPlayer = document.getElementById('nexus-audio');
+
+function playSFX(type) {
+    const sfx = (type === 'cam') ? document.getElementById('sfx-cam') : document.getElementById('sfx-ui');
+    sfx.currentTime = 0;
+    sfx.play().catch(e => console.log("SFX blocked by browser."));
+}
+
+function startNexusAudio() {
+    if (!playbackStarted && currentTrack < playlist.length) {
+        playbackStarted = true;
+        playSequence();
+    }
+}
+
+function playSequence() {
+    if (currentTrack < playlist.length) {
+        audioPlayer.src = playlist[currentTrack];
+        audioPlayer.volume = 0.7; 
+        audioPlayer.play().catch(e => {
+            playbackStarted = false; 
+            console.log("Audio waiting for user interaction.");
+        });
+        audioPlayer.onended = function() {
+            currentTrack++;
+            if (currentTrack < playlist.length) playSequence();
+        };
+    }
+}
+
+document.addEventListener('click', () => startNexusAudio(), { once: true });
+
+function isLatinScript(text) {
+    const latinRegex = /^[a-zA-Z0-9\s\.,!?"'#\-\(\):;%&@\u00C0-\u017F]+$/;
+    return latinRegex.test(text);
+}
+
+const wmoCodes = {0:"CLEAR SKY",1:"MAINLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",45:"FOG",48:"RIME FOG",51:"LIGHT DRIZZLE",53:"MODERATE DRIZZLE",55:"DENSE DRIZZLE",56:"LIGHT FREEZING DRIZZLE",57:"DENSE FREEZING DRIZZLE",61:"SLIGHT RAIN",63:"MODERATE RAIN",65:"HEAVY RAIN",66:"LIGHT FREEZING RAIN",67:"HEAVY FREEZING RAIN",71:"SLIGHT SNOW",73:"MODERATE SNOW",75:"HEAVY SNOW",77:"SNOW GRAINS",80:"SLIGHT RAIN SHOWERS",81:"MODERATE RAIN SHOWERS",82:"VIOLENT RAIN SHOWERS",85:"SLIGHT SNOW SHOWERS",86:"HEAVY SNOW SHOWERS",95:"THUNDERSTORM",96:"THUNDERSTORM W/ SLIGHT HAIL",99:"THUNDERSTORM W/ HEAVY HAIL"};
+
+const cities = [
+    {name:"London",zone:"Europe/London",lat:51.50,lon:-0.12,qCity:"London",qCountry:"United Kingdom",defaultLink:"https://www.youtube.com/watch?v=Lxqcg1qt0XU"},
+    {name:"Belfast",zone:"Europe/Belfast",lat:54.59,lon:-5.93,qCity:"Belfast",qCountry:"Northern Ireland",defaultLink:"https://www.trafficwatchni.com/twni/cameras/static?id=193"},
+    {name:"Montréal",zone:"America/Toronto",lat:45.50,lon:-73.56,qCity:"Montreal",qCountry:"Canada",defaultLink:"https://www.youtube.com/watch?v=azXXRr-oIBA"},
+    {name:"New York",zone:"America/New_York",lat:40.71,lon:-74.00,qCity:"New York",qCountry:"United States",defaultLink:"https://www.youtube.com/watch?v=VGnFLdQW39A"},
+    {name:"Ottawa",zone:"America/Toronto",lat:45.42,lon:-75.69,qCity:"Ottawa",qCountry:"Canada",defaultLink:"https://www.youtube.com/watch?v=lLYosWv_AwQ"},
+    {name:"Toronto",zone:"America/Toronto",lat:43.65,lon:-79.38,qCity:"Toronto",qCountry:"Canada",defaultLink:"https://www.youtube.com/watch?v=jwHkDXvIo10"},
+    {name:"Querétaro",zone:"America/Mexico_City",lat:20.58,lon:-100.38,qCity:"Queretaro",qCountry:"Mexico",defaultLink:"https://www.youtube.com/watch?v=Qm2ENkgMgUE"},
+    {name:"Calgary",zone:"America/Edmonton",lat:51.04,lon:-114.05,qCity:"Calgary",qCountry:"Canada",defaultLink:"https://www.youtube.com/watch?v=MwcqP3ta6RI"},
+    {name:"Los Angeles",zone:"America/Los_Angeles",lat:34.05,lon:-118.24,qCity:"Los Angeles",qCountry:"United States",defaultLink:"https://www.youtube.com/watch?v=3LXQWU67Ufk"},
+    {name:"Seattle",zone:"America/Los_Angeles",lat:47.60,lon:-122.33,qCity:"Seattle",qCountry:"United States",defaultLink:"https://www.youtube.com/watch?v=OuDe2uBrYIQ"},
+    {name:"Vancouver",zone:"America/Vancouver",lat:49.28,lon:-123.12,qCity:"Vancouver",qCountry:"Canada",defaultLink:"https://www.youtube.com/watch?v=rxyNjFKwzJA"},
+    {name:"Hong Kong",zone:"Asia/Hong_Kong",lat:22.31,lon:114.16,qCity:"Hong Kong",qCountry:"China",defaultLink:"https://www.youtube.com/watch?v=QT_ODf7769U"},
+    {name:"Tehran",zone:"Asia/Tehran",lat:35.68,lon:51.39,qCity:"Tehran",qCountry:"Iran",defaultLink:"https://www.youtube.com/watch?v=nAZ_CZrjcwQ"},
+    {name:"Kyiv",zone:"Europe/Kyiv",lat:50.45,lon:30.52,qCity:"(Kyiv OR Kiev)",qCountry:"Ukraine",defaultLink:"https://www.youtube.com/watch?v=R-qCsZ1obbc"},
+    {name:"Udine",zone:"Europe/Rome",lat:46.06,lon:13.23,qCity:"Udine",qCountry:"Italy",defaultLink:"https://udine.panomax.com/"},
+    {name:"Paris",zone:"Europe/Paris",lat:48.85,lon:2.35,qCity:"Paris",qCountry:"France",defaultLink:"https://www.youtube.com/watch?v=OzYp4NRZlwQ"}
+];
+
+const CORS_PROXIES = ['https://api.allorigins.win/raw?url=', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
+let currentProxyIndex = 0;
+function getProxy() { return CORS_PROXIES[currentProxyIndex]; }
+function rotateProxy() { currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length; }
+
+const RSS_FEEDS = {
+    cityFeeds: {
+        'Vancouver': ['https://www.cbc.ca/cmlink/rss-canada-britishcolumbia', 'https://globalnews.ca/british-columbia/feed/'],
+        'Seattle': ['https://www.seattletimes.com/seattle-news/feed/', 'https://www.king5.com/feeds/syndication/rss/news/local'],
+        'Los Angeles': ['https://www.latimes.com/local/rss2.0.xml', 'https://abc7.com/feed/'],
+        'Calgary': ['https://www.cbc.ca/cmlink/rss-canada-calgary', 'https://globalnews.ca/calgary/feed/'],
+        'Querétaro': ['https://www.eluniversalqueretaro.mx/rss.xml', 'https://www.am.com.mx/queretaro/rss.xml'],
+        'Toronto': ['https://www.cbc.ca/cmlink/rss-canada-toronto', 'https://www.thestar.com/feeds.articles.news.gta.rss'],
+        'Ottawa': ['https://www.cbc.ca/cmlink/rss-canada-ottawa', 'https://ottawacitizen.com/feed/'],
+        'New York': ['https://rss.nytimes.com/services/xml/rss/nyt/NYRegion.xml', 'https://www.ny1.com/feeds/news'],
+        'Montréal': ['https://www.cbc.ca/cmlink/rss-canada-montreal', 'https://montrealgazette.com/feed/'],
+        'Belfast': ['https://feeds.bbci.co.uk/news/northern_ireland/rss.xml', 'https://www.belfasttelegraph.co.uk/cmlink/belfast-telegraph-news-1.13907658'],
+        'London': ['https://feeds.bbci.co.uk/news/england/london/rss.xml', 'https://www.standard.co.uk/rss'],
+        'Paris': ['https://www.france24.com/fr/rss', 'https://www.lemonde.fr/rss/une.xml'],
+        'Udine': ['https://www.ansa.it/sito/ansait_rss.xml', 'https://www.rainews.it/rss/homepage.xml'],
+        'Kyiv': ['https://www.kyivpost.com/feed', 'https://www.ukrinform.net/rss/block-lastnews'],
+        'Tehran': ['https://www.presstv.ir/rss', 'https://www.tehrantimes.com/rss/tp/1'],
+        'Hong Kong': ['https://www.scmp.com/rss/91/feed', 'https://www.thestandard.com.hk/newsfeed/latest/news.xml']
+    },
+    intel: ['https://rss.dw.com/xml/rss-en-world', 'https://www.aljazeera.com/xml/rss/all.xml', 'https://feeds.bbci.co.uk/news/world/rss.xml'],
+    aviation: [
+        'https://airguide.info/category/air-travel-business/feed/', 
+        'https://www.flightglobal.com/113.rss',
+        'https://www.ainonline.com/rss/business-aviation'
+    ],
+    finance: ['https://www.cnbc.com/id/100003114/device/rss/rss.html', 'https://feeds.finance.yahoo.com/rss/2.0/headline']
+};
+
+async function fetchRSS(url, limit = 5) {
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+        try {
+            const res = await fetch(getProxy() + encodeURIComponent(url), { signal: AbortSignal.timeout(8000) });
+            const text = await res.text();
+            const xml = new DOMParser().parseFromString(text, 'text/xml');
+            const items = xml.querySelectorAll('item, entry');
+            const articles = [];
+            items.forEach((item, idx) => {
+                if (idx >= limit) return;
+                const title = item.querySelector('title')?.textContent?.trim() || '';
+                if (title) articles.push({ title });
+            });
+            if (articles.length > 0) return articles;
+        } catch (e) { rotateProxy(); }
+    }
+    return [];
+}
+
+async function fetchGdeltFallback(query, limit=3, span="24h") {
+    try {
+        const res = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&maxrecords=${limit}&format=json&timespan=${span}`);
+        const data = await res.json();
+        return (data.articles || []).map(a => ({ title: a.title }));
+    } catch { return []; }
+}
+
+async function fetchCityNews(cityName, limit = 3) {
+    const feeds = RSS_FEEDS.cityFeeds[cityName] || [];
+    let allArticles = [];
+    for (const url of feeds) {
+        const arts = await fetchRSS(url, limit);
+        allArticles = allArticles.concat(arts);
+    }
+    const filtered = allArticles.filter(a => {
+        const exclude = ['sport', 'football', 'soccer', 'celebrity'];
+        return !exclude.some(w => a.title.toLowerCase().includes(w)) && isLatinScript(a.title);
+    });
+    let final = filtered.slice(0, limit);
+    if (final.length === 0) {
+        const c = cities.find(x => x.name === cityName);
+        const gdelt = await fetchGdeltFallback(`"${c.qCity}"`, limit * 2, "24h");
+        final = gdelt.filter(a => isLatinScript(a.title)).slice(0, limit);
+    }
+    return final;
+}
+
+async function fetchTickerNews(category, limit = 10) {
+    const feeds = RSS_FEEDS[category] || [];
+    let all = [];
+    for (const url of feeds) {
+        const arts = await fetchRSS(url, limit);
+        all = all.concat(arts);
+    }
+    let filtered = all.filter(a => isLatinScript(a.title));
+    if (category === 'aviation') {
+        const bizKeywords = ['airline', 'boeing', 'airbus', 'fleet', 'carrier', 'iata', 'corporate', 'bizjet'];
+        filtered.sort((a, b) => {
+            const aM = bizKeywords.some(w => a.title.toLowerCase().includes(w));
+            const bM = bizKeywords.some(w => b.title.toLowerCase().includes(w));
+            return (aM === bM) ? 0 : aM ? -1 : 1;
+        });
+    }
+    if (filtered.length === 0) {
+        const q = { 'intel': 'military', 'aviation': '"airline news" OR "business aviation"', 'finance': 'market' };
+        const gdelt = await fetchGdeltFallback(q[category], limit * 2, "12h");
+        filtered = gdelt.filter(a => isLatinScript(a.title));
+    }
+    return filtered.slice(0, limit);
+}
+
+function setMatrix(type, btn) {
+    const frame = document.getElementById('main-matrix-frame');
+    const label = document.getElementById('matrix-label');
+    document.querySelectorAll('.matrix-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    let base = "https://embed.windy.com/embed2.html?lat=35&lon=-10&zoom=3&level=surface&menu=&message=&marker=&calendar=&pressure=true&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1";
+    switch(type) {
+        case 'radar': frame.src = base + "&overlay=radar&product=radar"; label.textContent = "LIVE_INTELLIGENCE: DOPPLER RADAR"; break;
+        case 'satellite': frame.src = base + "&overlay=satellite&product=satellite"; label.textContent = "LIVE_INTELLIGENCE: ORBITAL FEED"; break;
+        case 'wind': frame.src = base + "&overlay=wind&product=ecmwf"; label.textContent = "LIVE_INTELLIGENCE: WIND VECTORS"; break;
+        case 'temperature': frame.src = base + "&overlay=temp&product=ecmwf"; label.textContent = "LIVE_INTELLIGENCE: THERMAL MAPPING"; break;
+        case 'flights': frame.src = "https://globe.adsbexchange.com/?numIcons=100&hideSidebar&hideButtons&zoom=3&lat=35&lon=-10"; label.textContent = "LIVE_INTELLIGENCE: AIRCRAFT TRANSPONDERS"; break;
+    }
+}
+
+async function refreshData() {
+    startNexusAudio();
+    cities.forEach(c => {
+        const safe = c.name.replace(/\s/g, '');
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current_weather=true`)
+            .then(r => r.json())
+            .then(w => {
+                const row = document.getElementById(`row-${safe}`);
+                if(row) row.querySelector(".weather").innerHTML = `<strong>${wmoCodes[w.current_weather.weathercode] || "STABLE"}</strong><br>${w.current_weather.temperature}°C`;
+            }).catch(()=>{});
+    });
+    loadTickers();
+    for (const c of cities) {
+        const safe = c.name.replace(/\s/g, '');
+        const row = document.getElementById(`row-${safe}`);
+        if(!row || row.style.display === 'none') continue;
+        row.querySelector(".news").innerHTML = "<div>ACQUIRING FEED...</div>";
+        const arts = await fetchCityNews(c.name, 3);
+        row.querySelector(".news").innerHTML = arts.length > 0 ? arts.map(a => `<div>${a.title}</div>`).join("") : "<div>NO FEED AVAILABLE</div>";
+        await new Promise(r => setTimeout(r, 300)); 
+    }
+}
+
+async function loadTickers() {
+    const cats = [{ id: 'intel', cat: 'intel' }, { id: 'aviation', cat: 'aviation' }, { id: 'finance', cat: 'finance' }];
+    for (const c of cats) {
+        const arts = await fetchTickerNews(c.cat, 10);
+        const content = arts.map(a => `<span class="ticker-item">[${c.id.toUpperCase()}] ${a.title}</span>`).join("");
+        document.getElementById(`${c.id}-move`).innerHTML = content + content;
+    }
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('header-date').textContent = now.toUTCString().toUpperCase();
+    cities.forEach(c => {
+        const safe = c.name.replace(/\s/g, '');
+        const row = document.getElementById(`row-${safe}`);
+        if(row) {
+            const timeStr = new Intl.DateTimeFormat("en-GB", { timeZone: c.zone, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now);
+            const jan = new Date(now.getFullYear(), 0, 1);
+            const jul = new Date(now.getFullYear(), 6, 1);
+            const julOffset = new Intl.DateTimeFormat('en-US', { timeZone: c.zone, timeZoneName: 'short' }).formatToParts(jul).find(part => part.type === 'timeZoneName').value;
+            const currentOffset = new Intl.DateTimeFormat('en-US', { timeZone: c.zone, timeZoneName: 'short' }).formatToParts(now).find(part => part.type === 'timeZoneName').value;
+            row.querySelector(".time").innerHTML = `${timeStr}<br><span style="font-size:9px;color:#64748b">${(julOffset === currentOffset) ? 'DST' : 'STANDARD'}</span>`;
+        }
+    });
+}
+
+function exportToFile() {
+    const config = { accent: document.getElementById('color-accent').value, intel: document.getElementById('color-intel').value, aviation: document.getElementById('color-aviation').value, finance: document.getElementById('color-finance').value, links: {}, visibility: {} };
+    cities.forEach(c => {
+        const safe = c.name.replace(/\s/g, '');
+        config.links[c.name] = document.getElementById(`link-input-${safe}`).value;
+        config.visibility[c.name] = document.getElementById(`row-${safe}`).style.display !== 'none';
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(config, null, 2)], {type: "application/json"}));
+    a.download = "sin_nexus_config.json"; a.click();
+}
+
+function importFromFile(e) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const config = JSON.parse(event.target.result);
+        document.getElementById('color-accent').value = config.accent;
+        document.getElementById('color-intel').value = config.intel;
+        document.getElementById('color-aviation').value = config.aviation;
+        document.getElementById('color-finance').value = config.finance;
+        cities.forEach(c => {
+            const safe = c.name.replace(/\s/g, '');
+            if(config.links[c.name]) document.getElementById(`link-input-${safe}`).value = config.links[c.name];
+            const isVis = config.visibility[c.name] !== false;
+            document.getElementById(`row-${safe}`).style.display = isVis ? '' : 'none';
+            const cb = document.getElementById(`cb-${safe}`); if(cb) cb.checked = isVis;
+        });
+        updateUI();
+    };
+    reader.readAsText(e.target.files[0]);
+}
+
+function init() {
+    const table = document.getElementById('data-table');
+    const toggles = document.getElementById('city-toggles');
+    const linksList = document.getElementById('cam-inputs-list');
+    cities.forEach(c => {
+        const safe = c.name.replace(/\s/g, '');
+        const tr = document.createElement('tr');
+        tr.id = `row-${safe}`;
+        tr.innerHTML = `<td><button class="file-btn" onclick="playSFX('cam'); openCam('${safe}')" style="padding:2px 6px">[CAM]</button> <span class="city-name">${c.name}</span></td><td class="time"></td><td class="weather"></td><td class="news">INITIALIZING...</td>`;
+        table.appendChild(tr);
+        toggles.innerHTML += `<label style="display:block;margin:3px 0"><input type="checkbox" id="cb-${safe}" checked onchange="playSFX('ui'); document.getElementById('row-${safe}').style.display=this.checked?'':'none';"> ${c.name.toUpperCase()}</label>`;
+        linksList.innerHTML += `${c.name}:<br><input type="text" id="link-input-${safe}" class="cam-input" value="${c.defaultLink}"><br>`;
+    });
+    updateUI(); 
+    setInterval(updateClock, 1000); 
+    refreshData(); 
+    setInterval(refreshData, 900000); 
+}
+
+function updateUI() {
+    document.documentElement.style.setProperty('--accent', document.getElementById('color-accent').value);
+    document.documentElement.style.setProperty('--intel-scroll', document.getElementById('color-intel').value);
+    document.documentElement.style.setProperty('--aviation-scroll', document.getElementById('color-aviation').value);
+    document.documentElement.style.setProperty('--finance-scroll', document.getElementById('color-finance').value);
+}
+
+function toggleSettings() { 
+    const m = document.getElementById('settings-modal'); 
+    m.style.display = (m.style.display==='block')?'none':'block'; 
+}
+
+function openCam(s) { window.open(document.getElementById(`link-input-${s}`).value, '_blank'); }
+
+init();
+</script>
+</body>
+</html>
