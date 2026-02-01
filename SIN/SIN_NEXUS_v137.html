@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SIN // STRESS INTEGRATION NEXUS v1.36</title>
+<title>SIN // STRESS INTEGRATION NEXUS v1.37</title>
 <style>
     :root { 
         --accent: #3b82f6; 
@@ -101,7 +101,7 @@
 <header>
     <div style="display:flex; align-items:center; gap:10px; font-weight:bold; font-size:11px;">
         <div class="pulse-indicator"></div>
-        <span>SIN // STRESS INTEGRATION NEXUS // LIVE MONITORING // ABot v1.36</span>
+        <span>SIN // STRESS INTEGRATION NEXUS // LIVE MONITORING // ABot v1.37</span>
     </div>
     <span id="header-date"></span>
     <div style="display:flex; align-items:center;">
@@ -172,7 +172,7 @@
 
 <script>
 /**
- * SIN v1.36 - RECURSIVE REFRESH + LONGITUDE SORT
+ * SIN v1.37 - RECURSIVE REFRESH + LONGITUDE SORT
  */
 
 const playlist = ["Music/News1.mp3", "Music/News2.mp3", "Music/sstress.mp3", "Music/sstress2.mp3"];
@@ -336,7 +336,7 @@ function renderConfig() {
 function exportConfig() {
     const blob = new Blob([JSON.stringify(state)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = "SIN_v136_NEXUS.json"; a.click();
+    a.download = "SIN_v137_NEXUS.json"; a.click();
 }
 
 function importConfig(e) {
