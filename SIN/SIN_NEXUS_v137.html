@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIN // STRESS INTEGRATION NEXUS v1.36</title>
+<style>
+    :root { 
+        --accent: #3b82f6; 
+        --text: #e5e7eb; 
+        --bg: #020617; 
+        --intel-scroll: #ffff00; 
+        --aviation-scroll: #ff8c00; 
+        --finance-scroll: #00ff00;
+        --pulse-color: #10b981;
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Courier New", monospace; padding-bottom: 110px; overflow-x: hidden; }
+    
+    body::before {
+        content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+        z-index: 2000; background-size: 100% 3px, 3px 100%; pointer-events: none; opacity: 0.15;
+    }
+
+    header { padding: 15px 20px; background: #0f172a; border-bottom: 3px double var(--accent); display: flex; justify-content: space-between; align-items: center; color: var(--accent); }
+    #header-date { font-size: 11px; color: #94a3b8; }
+    
+    .matrix-switcher {
+        background: #0f172a; padding: 8px; border-bottom: 1px solid var(--accent);
+        display: flex; gap: 10px; justify-content: center; z-index: 100; position: relative;
+    }
+    .matrix-btn {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: var(--accent);
+        font-family: inherit; font-size: 9px; padding: 4px 12px; cursor: pointer; font-weight: bold;
+    }
+    .matrix-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+
+    .global-monitor { width: 100%; height: 420px; background: #000; border-bottom: 2px solid var(--accent); position: relative; overflow: hidden; }
+    .global-monitor iframe { width: 100%; height: 100%; border: none; filter: saturate(1.3) brightness(0.7) contrast(1.1); }
+    
+    .monitor-overlay {
+        position: absolute; top: 15px; left: 15px; background: rgba(15, 23, 42, 0.9);
+        color: var(--accent); padding: 5px 12px; font-size: 10px; font-weight: bold; border: 1px solid var(--accent); z-index: 10;
+    }
+    .pulse-indicator { 
+    width: 10px; 
+    height: 10px; 
+    background-color: var(--pulse-color); 
+    border-radius: 50%; 
+    box-shadow: 0 0 10px var(--pulse-color); 
+    animation: heartbeat 2s infinite ease-in-out; 
+    }
+
+    @keyframes heartbeat { 
+    0% { opacity: 1; transform: scale(1); } 
+    50% { opacity: 0.3; transform: scale(0.8); } 
+    100% { opacity: 1; transform: scale(1); } 
+    }
+    .weather { 
+    font-size: 13px; 
+    color: #94a3b8; 
+    text-transform: uppercase; 
+    }
+
+    #settings-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid var(--accent); padding: 20px; z-index: 3000; width: 800px; box-shadow: 0 0 40px #000; max-height: 90vh; overflow-y: auto; }
+    .setting-section { margin-bottom: 20px; font-size: 11px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    .config-input { width: 100%; background: #020617; border: 1px solid #334155; color: #fff; font-family: inherit; font-size: 10px; padding: 6px; margin-top: 4px; box-sizing: border-box; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .file-btn { flex: 1; padding: 8px; background: #1e293b; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-size: 10px; font-weight: bold; text-align: center; }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead { background: #111827; border-bottom: 2px solid var(--accent); }
+    th { padding: 10px; font-size: 10px; color: #94a3b8; text-align: left; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+
+    .city-name { color: var(--accent); font-weight: bold; text-transform: uppercase; font-size: 13px; }
+    .time { font-size: 18px; color: #fff; }
+    .news div { background: rgba(30, 41, 59, 0.4); padding: 4px; margin-bottom: 4px; border-left: 2px solid var(--accent); font-size: 11px; text-transform: uppercase; }
+
+    .ticker-container { position: fixed; width: 100%; display: flex; align-items: center; z-index: 1000; height: 30px; background: #020617; }
+    #ticker-intel { bottom: 60px; color: var(--intel-scroll); border-top: 1px solid rgba(255,255,255,0.1); }
+    #ticker-aviation { bottom: 30px; color: var(--aviation-scroll); border-top: 1px solid var(--aviation-scroll); }
+    #ticker-finance { bottom: 0; color: var(--finance-scroll); border-top: 1px solid var(--finance-scroll); }
+    
+    .ticker-label { padding: 0 10px; font-size: 10px; font-weight: bold; height: 100%; display: flex; align-items: center; background: rgba(0,0,0,0.8); border-right: 1px solid currentColor; min-width: 90px; }
+    .ticker-wrap { overflow: hidden; width: 100%; white-space: nowrap; }
+    .ticker-move { display: inline-block; animation: ticker-kf 400s linear infinite; will-change: transform; }
+    .ticker-item { display: inline-block; padding: 0 60px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+    @keyframes ticker-kf { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .audio-toggle { background: transparent; border: 1px solid #475569; color: #475569; font-size: 9px; padding: 2px 6px; cursor: pointer; margin-left: 15px; text-transform: uppercase; }
+    .audio-toggle.on { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<audio id="nexus-audio" style="display:none;"></audio>
+<audio id="sfx-cam" src="Music/beep1.mp3" style="display:none;"></audio>
+<audio id="sfx-ui" src="Music/beep2.wav" style="display:none;"></audio>
+
+<header>
+    <div style="display:flex; align-items:center; gap:10px; font-weight:bold; font-size:11px;">
+        <div class="pulse-indicator"></div>
+        <span>SIN // STRESS INTEGRATION NEXUS // LIVE MONITORING // ABot v1.36</span>
+    </div>
+    <span id="header-date"></span>
+    <div style="display:flex; align-items:center;">
+        <button id="master-mute" class="audio-toggle on" onclick="toggleAudio()">[ AUDIO: ON ]</button>
+        <button onclick="playSFX('ui'); toggleSettings()" style="background:#1e293b; color:var(--accent); border:1px solid var(--accent); font-size:10px; padding:4px 10px; cursor:pointer; margin-left:10px;">[ CONFIG ]</button>
+    </div>
+</header>
+
+<div class="matrix-switcher">
+    <button class="matrix-btn active" onclick="playSFX('ui'); setMatrix('radar', this)">[ DOPPLER RADAR ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('satellite', this)">[ SATELLITE FEED ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('wind', this)">[ WIND VECTORS ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('temp', this)">[ TEMPERATURE ]</button> 
+    <button class="matrix-btn" onclick="playSFX('ui'); setMatrix('flights', this)">[ AIRCRAFT TRACKER ]</button>
+    <button class="matrix-btn" onclick="playSFX('ui'); window.open('https://pentagon-pizza.vercel.app/', '_blank')">[ PIZZA INTEL ]</button>
+</div>
+
+<div class="global-monitor">
+    <div class="monitor-overlay" id="matrix-label">LIVE_INTELLIGENCE: DOPPLER RADAR</div>
+    <iframe id="main-matrix-frame" src="https://embed.windy.com/embed2.html?lat=35&lon=-10&zoom=3&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=&pressure=true&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+</div>
+
+<div id="settings-modal">
+    <div style="font-weight:bold; color:var(--accent); margin-bottom:10px; border-bottom: 2px solid var(--accent);">STRESS_NEXUS_CORE_CONFIG</div>
+    
+    <div class="setting-section">
+        <strong>DATA PORTAL:</strong>
+        <div class="btn-row">
+            <button class="file-btn" onclick="playSFX('ui'); exportConfig()">EXPORT (.JSON)</button>
+            <button class="file-btn" onclick="playSFX('ui'); document.getElementById('imp-f').click()">IMPORT (.JSON)</button>
+            <input type="file" id="imp-f" style="display:none" onchange="importConfig(event)">
+        </div>
+    </div>
+
+    <div class="setting-section">
+        <strong>GLOBAL TICKER FEEDS (CSV URLs):</strong><br>
+        INTEL: <input type="text" id="cfg-rss-intel" class="config-input">
+        AVIATION: <input type="text" id="cfg-rss-aviation" class="config-input">
+        FINANCE: <input type="text" id="cfg-rss-finance" class="config-input">
+    </div>
+
+    <div class="setting-section">
+        <strong>SECTOR CONFIGURATION:</strong><br>
+        <div id="sector-config-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:10px;"></div>
+    </div>
+
+    <div class="setting-section">
+        <strong>CHROMA SETTINGS:</strong><br>
+        ACCENT: <input type="color" id="cfg-c-accent" onchange="updateUI()">
+        INTEL: <input type="color" id="cfg-c-intel" onchange="updateUI()">
+        AVIATION: <input type="color" id="cfg-c-aviation" onchange="updateUI()">
+        FINANCE: <input type="color" id="cfg-c-finance" onchange="updateUI()">
+    </div>
+
+    <button class="file-btn" style="width:100%" onclick="playSFX('ui'); toggleSettings()">COMMIT CHANGES</button>
+</div>
+
+<table>
+    <thead>
+        <tr><th style="width:180px">SECTOR</th><th style="width:110px">TIME</th><th style="width:130px">ATMOSPHERICS</th><th>REGIONAL INTEL REPORT</th></tr>
+    </thead>
+    <tbody id="data-table"></tbody>
+</table>
+
+<div id="ticker-intel" class="ticker-container"><div class="ticker-label">INTEL</div><div class="ticker-wrap"><div id="intel-move" class="ticker-move"></div></div></div>
+<div id="ticker-aviation" class="ticker-container"><div class="ticker-label">AVIATION</div><div class="ticker-wrap"><div id="aviation-move" class="ticker-move"></div></div></div>
+<div id="ticker-finance" class="ticker-container"><div class="ticker-label">FINANCE</div><div class="ticker-wrap"><div id="finance-move" class="ticker-move"></div></div></div>
+
+<script>
+/**
+ * SIN v1.36 - RECURSIVE REFRESH + LONGITUDE SORT
+ */
+
+const playlist = ["Music/News1.mp3", "Music/News2.mp3", "Music/sstress.mp3", "Music/sstress2.mp3"];
+let currentTrack = 0;
+let playbackStarted = false;
+let audioEnabled = true;
+const audioPlayer = document.getElementById('nexus-audio');
+
+function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    const btn = document.getElementById('master-mute');
+    if (!audioEnabled) {
+        btn.textContent = "[ AUDIO: OFF ]";
+        btn.classList.remove('on');
+        audioPlayer.pause();
+    } else {
+        btn.textContent = "[ AUDIO: ON ]";
+        btn.classList.add('on');
+        if (playbackStarted) audioPlayer.play().catch(()=>{});
+    }
+}
+
+function playSFX(type) {
+    if (!audioEnabled) return;
+    const sfx = (type === 'cam') ? document.getElementById('sfx-cam') : document.getElementById('sfx-ui');
+    sfx.currentTime = 0;
+    sfx.play().catch(()=>{});
+}
+
+function startNexusAudio() {
+    if (!playbackStarted && audioEnabled) {
+        playbackStarted = true;
+        playSequence();
+    }
+}
+
+function playSequence() {
+    if (currentTrack < playlist.length && audioEnabled) {
+        audioPlayer.src = playlist[currentTrack];
+        audioPlayer.volume = 0.7; 
+        audioPlayer.play().catch(() => { playbackStarted = false; });
+        audioPlayer.onended = function() {
+            currentTrack++;
+            if (currentTrack < playlist.length) playSequence();
+        };
+    }
+}
+
+document.addEventListener('click', () => startNexusAudio(), { once: true });
+
+const defaultCities = [
+    {name:"London",zone:"Europe/London",lat:51.5,lon:-0.1,qCity:"London",qCountry:"UK",cam:"https://www.youtube.com/watch?v=Lxqcg1qt0XU",rss:"https://feeds.bbci.co.uk/news/england/london/rss.xml", vis:true},
+    {name:"Belfast",zone:"Europe/Belfast",lat:54.6,lon:-5.9,qCity:"Belfast",qCountry:"UK",cam:"https://www.trafficwatchni.com/twni/cameras/static?id=193",rss:"https://feeds.bbci.co.uk/news/northern_ireland/rss.xml", vis:true},
+    {name:"Montréal",zone:"America/Toronto",lat:45.5,lon:-73.6,qCity:"Montreal",qCountry:"Canada",cam:"https://www.youtube.com/watch?v=azXXRr-oIBA",rss:"https://www.cbc.ca/cmlink/rss-canada-montreal", vis:true},
+    {name:"New York",zone:"America/New_York",lat:40.7,lon:-74.0,qCity:"New York",qCountry:"USA",cam:"https://www.youtube.com/watch?v=VGnFLdQW39A",rss:"https://rss.nytimes.com/services/xml/rss/nyt/NYRegion.xml", vis:true},
+    {name:"Ottawa",zone:"America/Toronto",lat:45.42,lon:-75.7,qCity:"Ottawa",qCountry:"Canada",cam:"https://www.youtube.com/watch?v=lLYosWv_AwQ",rss:"https://www.cbc.ca/cmlink/rss-canada-ottawa", vis:true},
+    {name:"Toronto",zone:"America/Toronto",lat:43.65,lon:-79.38,qCity:"Toronto",qCountry:"Canada",cam:"https://www.youtube.com/watch?v=jwHkDXvIo10",rss:"https://www.cbc.ca/cmlink/rss-canada-toronto", vis:true},
+    {name:"Querétaro",zone:"America/Mexico_City",lat:20.58,lon:-100.38,qCity:"Queretaro",qCountry:"Mexico",cam:"https://www.youtube.com/watch?v=Qm2ENkgMgUE",rss:"https://www.eluniversalqueretaro.mx/rss.xml", vis:true},
+    {name:"Vancouver",zone:"America/Vancouver",lat:49.3,lon:-123.1,qCity:"Vancouver",qCountry:"Canada",cam:"https://www.youtube.com/watch?v=rxyNjFKwzJA",rss:"https://www.cbc.ca/cmlink/rss-canada-britishcolumbia", vis:true},
+    {name:"Hong Kong",zone:"Asia/Hong_Kong",lat:22.3,lon:114.2,qCity:"Hong Kong",qCountry:"China",cam:"https://www.youtube.com/watch?v=QT_ODf7769U",rss:"https://www.scmp.com/rss/91/feed", vis:true},
+    {name:"Tehran",zone:"Asia/Tehran",lat:35.7,lon:51.4,qCity:"Tehran",qCountry:"Iran",cam:"https://www.youtube.com/watch?v=nAZ_CZrjcwQ",rss:"https://en.mehrnews.com/rss, https://www.tehrantimes.com/rss", vis:true},
+    {name:"Kyiv",zone:"Europe/Kyiv",lat:50.4,lon:30.5,qCity:"Kyiv",qCountry:"Ukraine",cam:"https://www.youtube.com/watch?v=R-qCsZ1obbc",rss:"https://www.kyivpost.com/feed", vis:true},
+    {name:"Paris",zone:"Europe/Paris",lat:48.85,lon:2.35,qCity:"Paris",qCountry:"France",cam:"https://www.youtube.com/watch?v=OzYp4NRZlwQ",rss:"https://www.france24.com/fr/rss", vis:true}
+];
+
+let state = {
+    cities: defaultCities,
+    rss: {
+        intel: "https://rss.dw.com/xml/rss-en-world,https://www.aljazeera.com/xml/rss/all.xml",
+        aviation: "https://airguide.info/category/air-travel-business/feed/,https://www.flightglobal.com/113.rss",
+        finance: "https://www.cnbc.com/id/100003114/device/rss/rss.html,https://www.cnbc.com/id/10000664/device/rss/rss.html,https://feeds.a.dj.com/rss/WSJMorningConceptsViews.xml"
+    },
+    colors: { accent:"#3b82f6", intel:"#ffff00", aviation:"#ff8c00", finance:"#00ff00" }
+};
+
+const PROXIES = ['https://api.allorigins.win/raw?url=', 'https://api.codetabs.com/v1/proxy?quest=', 'https://corsproxy.io/?'];
+
+function isStrictLatin(str) { return /^[\x00-\x7F\u00C0-\u017F\s]*$/.test(str); }
+
+async function fetchStream(url, limit = 4) {
+    for (const p of PROXIES) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        try {
+            const r = await fetch(p + encodeURIComponent(url), { signal: controller.signal });
+            clearTimeout(timeoutId);
+            const xml = new DOMParser().parseFromString(await r.text(), 'text/xml');
+            const items = Array.from(xml.querySelectorAll('item, entry'));
+            let output = [];
+            for(let i=0; i<items.length && output.length < limit; i++) {
+                let t = items[i].querySelector('title').textContent;
+                if(isStrictLatin(t)) output.push({ title: t.toUpperCase() });
+            }
+            if(output.length > 0) return output;
+        } catch(e) {
+            clearTimeout(timeoutId);
+        }
+    }
+    return [];
+}
+
+async function fetchGdelt(q) {
+    try {
+        const r = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&maxrecords=5&format=json&timespan=24h`);
+        const d = await r.json();
+        return (d.articles || []).filter(a => isStrictLatin(a.title)).map(a => ({ title: a.title.toUpperCase() }));
+    } catch { return []; }
+}
+
+function updateUI() {
+    state.colors.accent = document.getElementById('cfg-c-accent').value;
+    state.colors.intel = document.getElementById('cfg-c-intel').value;
+    state.colors.aviation = document.getElementById('cfg-c-aviation').value;
+    state.colors.finance = document.getElementById('cfg-c-finance').value;
+    document.documentElement.style.setProperty('--accent', state.colors.accent);
+    document.documentElement.style.setProperty('--intel-scroll', state.colors.intel);
+    document.documentElement.style.setProperty('--aviation-scroll', state.colors.aviation);
+    document.documentElement.style.setProperty('--finance-scroll', state.colors.finance);
+}
+
+function toggleSettings() {
+    const m = document.getElementById('settings-modal');
+    if(m.style.display === 'block') {
+        state.rss.intel = document.getElementById('cfg-rss-intel').value;
+        state.rss.aviation = document.getElementById('cfg-rss-aviation').value;
+        state.rss.finance = document.getElementById('cfg-rss-finance').value;
+        state.cities.forEach((c) => {
+            const s = c.name.replace(/\s/g, '');
+            c.vis = document.getElementById(`cb-${s}`).checked;
+            c.cam = document.getElementById(`cam-${s}`).value;
+            c.rss = document.getElementById(`rss-${s}`).value;
+            document.getElementById(`row-${s}`).style.display = c.vis ? '' : 'none';
+        });
+        m.style.display = 'none'; 
+        // Note: Sort is handled in renderTable which is called inside data refresh or init
+    } else {
+        renderConfig(); m.style.display = 'block';
+    }
+}
+
+function renderConfig() {
+    document.getElementById('cfg-rss-intel').value = state.rss.intel;
+    document.getElementById('cfg-rss-aviation').value = state.rss.aviation;
+    document.getElementById('cfg-rss-finance').value = state.rss.finance;
+    document.getElementById('cfg-c-accent').value = state.colors.accent;
+    document.getElementById('cfg-c-intel').value = state.colors.intel;
+    document.getElementById('cfg-c-aviation').value = state.colors.aviation;
+    document.getElementById('cfg-c-finance').value = state.colors.finance;
+
+    const grid = document.getElementById('sector-config-grid');
+    grid.innerHTML = state.cities.map(c => {
+        const s = c.name.replace(/\s/g, '');
+        return `<div style="background:rgba(0,0,0,0.3); padding:8px; border:1px solid #1e293b;">
+            <label style="color:var(--accent); font-weight:bold;"><input type="checkbox" id="cb-${s}" ${c.vis?'checked':''}> ${c.name.toUpperCase()}</label><br>
+            CAM URL: <input type="text" id="cam-${s}" class="config-input" value="${c.cam}">
+            RSS URL: <input type="text" id="rss-${s}" class="config-input" value="${c.rss}">
+        </div>`;
+    }).join('');
+}
+
+function exportConfig() {
+    const blob = new Blob([JSON.stringify(state)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = "SIN_v136_NEXUS.json"; a.click();
+}
+
+function importConfig(e) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        state = JSON.parse(ev.target.result);
+        updateUI(); 
+        renderTable(); 
+        // refreshData() is not called here directly because 
+        // it will be called by the existing timeout loop eventually, 
+        // but we can trigger it immediately to update news.
+    };
+    reader.readAsText(e.target.files[0]);
+}
+
+async function refreshData() {
+    for (const c of state.cities) {
+        const s = c.name.replace(/\s/g, '');
+        const row = document.getElementById(`row-${s}`);
+        if(!row || !c.vis) continue;
+
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current_weather=true`)
+            .then(r => r.json()).then(w => {
+const wmoDesc = {
+    0:"CLEAR SKY", 1:"MAINLY CLEAR", 2:"PARTLY CLOUDY", 3:"OVERCAST",
+    45:"FOG", 48:"DEPOSITING RIME FOG", 51:"LIGHT DRIZZLE", 53:"MODERATE DRIZZLE",
+    55:"DENSE DRIZZLE", 56:"LIGHT FREEZING DRIZZLE", 57:"DENSE FREEZING DRIZZLE",
+    61:"SLIGHT RAIN", 63:"MODERATE RAIN", 65:"HEAVY RAIN", 66:"LIGHT FREEZING RAIN",
+    67:"HEAVY FREEZING RAIN", 71:"SLIGHT SNOW FALL", 73:"MODERATE SNOW FALL",
+    75:"HEAVY SNOW FALL", 77:"SNOW GRAINS", 80:"SLIGHT RAIN SHOWERS", 
+    81:"MODERATE RAIN SHOWERS", 82:"VIOLENT RAIN SHOWERS", 85:"SLIGHT SNOW SHOWERS",
+    86:"HEAVY SNOW SHOWERS", 95:"THUNDERSTORM", 96:"TSHOWER W/ HAIL", 99:"TSHOWER W/ HEAVY HAIL"
+};
+                const code = w.current_weather.weathercode;
+                const condition = wmoDesc[code] || `CODE_${code}`;
+                row.querySelector(".weather").innerHTML = `<strong>${condition}</strong><br>${w.current_weather.temperature}°C // ${w.current_weather.windspeed} KM/H`;
+            });
+
+        let news = [];
+        if(c.rss) news = await fetchStream(c.rss);
+        if(news.length === 0) news = await fetchGdelt(`"${c.qCity}" "${c.qCountry}"`);
+        row.querySelector(".news").innerHTML = news.map(n => `<div>${n.title}</div>`).join('') || "<div>STATION_OFFLINE</div>";
+    }
+
+    for (const cat of ['intel', 'aviation', 'finance']) {
+        let items = [];
+        const urls = state.rss[cat].split(',');
+        for (const u of urls) { 
+            if(u.trim()) {
+                const fetched = await fetchStream(u.trim(), 6);
+                if (fetched.length > 0) items = items.concat(fetched);
+            }
+        }
+        if (items.length > 0) {
+            const html = items.map(i => `<span class="ticker-item">[${cat.toUpperCase()}] ${i.title}</span>`).join('');
+            document.getElementById(`${cat}-move`).innerHTML = html + html;
+        }
+    }
+
+    // FIX #4: RECURSIVE TIMEOUT
+    setTimeout(refreshData, 900000); 
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('header-date').textContent = now.toUTCString().toUpperCase();
+    state.cities.forEach(c => {
+        const s = c.name.replace(/\s/g, '');
+        const row = document.getElementById(`row-${s}`);
+        if(row && c.vis) {
+            const parts = new Intl.DateTimeFormat("en-GB", { 
+                timeZone: c.zone, hour: "2-digit", minute: "2-digit", second: "2-digit", 
+                hour12: false, timeZoneName: "short" 
+            }).formatToParts(now);
+            const time = parts.filter(p => p.type !== 'timeZoneName').map(p => p.value).join('');
+            const tz = parts.find(p => p.type === 'timeZoneName').value;
+            const status = (tz.includes('DT') || tz.includes('Summer')) ? 'DAYLIGHT' : 'STANDARD';
+            row.querySelector(".time").innerHTML = `${time}<br><span style="font-size:9px;color:var(--accent)">${tz} // ${status}</span>`;
+        }
+    });
+}
+
+function setMatrix(type, btn) {
+    document.querySelectorAll('.matrix-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    const f = document.getElementById('main-matrix-frame');
+    const label = document.getElementById('matrix-label');
+
+    const displayNames = {
+        'radar': 'LIVE_INTELLIGENCE: DOPPLER RADAR',
+        'satellite': 'LIVE_INTELLIGENCE: ORBITAL FEED',
+        'wind': 'LIVE_INTELLIGENCE: WIND VECTORS',
+        'temp': 'LIVE_INTELLIGENCE: THERMAL MAPPING',
+        'flights': 'LIVE_INTELLIGENCE: AIRCRAFT TRANSPONDERS'
+    };
+    label.textContent = displayNames[type] || "LIVE_INTELLIGENCE: MONITORING";
+
+    if(type === 'flights') {
+        f.src = "https://globe.adsbexchange.com/?numIcons=100&hideSidebar&hideButtons&zoom=3";
+    } else {
+        f.src = `https://embed.windy.com/embed2.html?lat=35&lon=-10&zoom=3&level=surface&overlay=${type}&product=radar&menu=&message=&marker=&calendar=&pressure=true&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+    }
+}
+
+function renderTable() {
+    // FIX: LONGITUDE SORTING (London (0) -> Moving West (Negative) -> Wrapping East (Positive))
+    state.cities.sort((a, b) => {
+        if (a.lon <= 0 && b.lon <= 0) return b.lon - a.lon; 
+        if (a.lon > 0 && b.lon > 0) return b.lon - a.lon;   
+        return a.lon - b.lon; 
+    });
+
+    const tb = document.getElementById('data-table');
+    tb.innerHTML = "";
+    state.cities.forEach(c => {
+        const s = c.name.replace(/\s/g, '');
+        tb.innerHTML += `<tr id="row-${s}" style="display:${c.vis?'':'none'}">
+            <td><button class="file-btn" onclick="playSFX('cam'); window.open('${c.cam}')" style="padding:2px 6px">[CAM]</button> <span class="city-name">${c.name}</span></td>
+            <td class="time"></td> <td class="weather"></td>
+            <td class="news">INIT...</td></tr>`;
+    });
+}
+
+function init() {
+    renderTable(); 
+    setInterval(updateClock, 1000); 
+    refreshData(); // Triggers recursive loop
+}
+init();
+</script>
+</body>
+</html>
